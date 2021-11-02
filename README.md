@@ -1,2 +1,32 @@
-# vnpy_portfoliostrategy
-vn.py框架的投资组合策略模块
+# vn.py框架的投资组合策略模块
+
+<p align="center">
+  <img src ="https://vnpy.oss-cn-shanghai.aliyuncs.com/vnpy-logo.png"/>
+</p>
+
+<p align="center">
+    <img src ="https://img.shields.io/badge/version-1.0.5-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/platform-windows|linux|macos-yellow.svg"/>
+    <img src ="https://img.shields.io/badge/python-3.7-blue.svg" />
+    <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
+</p>
+
+## 说明
+
+针对多合约组合策略实盘的功能模块，用于实现策略初始化、策略启动、策略停止、策略参数编辑以及策略移除等任务。
+
+## 安装
+
+安装需要基于2.8.0版本以上的[VN Studio](https://www.vnpy.com)。
+
+直接使用pip命令：
+
+```
+pip install vnpy_portfoliostrategy
+```
+
+下载解压后在cmd中运行
+
+```
+python setup.py install
+```
