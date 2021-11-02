@@ -1,10 +1,10 @@
 from typing import List, Dict
 from datetime import datetime
 
-from vnpy.trader.utility import BarGenerator, ArrayManager
+from vnpy.trader.utility import ArrayManager
 from vnpy.trader.object import TickData, BarData
-from vnpy.app.portfolio_strategy import StrategyTemplate, StrategyEngine
-from vnpy.app.portfolio_strategy.utility import PortfolioBarGenerator
+from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
+from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 
 
 class TrendFollowingStrategy(StrategyTemplate):

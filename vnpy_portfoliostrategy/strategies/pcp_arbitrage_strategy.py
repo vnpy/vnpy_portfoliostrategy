@@ -1,7 +1,7 @@
 from typing import List, Dict
 from datetime import datetime
 
-from vnpy.app.portfolio_strategy import StrategyTemplate, StrategyEngine
+from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 from vnpy.trader.utility import BarGenerator, extract_vt_symbol
 from vnpy.trader.object import TickData, BarData
 

@@ -492,7 +492,7 @@ class StrategyEngine(BaseEngine):
         Load strategy class from source code.
         """
         path1 = Path(__file__).parent.joinpath("strategies")
-        self.load_strategy_class_from_folder(path1, "vnpy.app.portfolio_strategy.strategies")
+        self.load_strategy_class_from_folder(path1, "vnpy_portfoliostrategy.strategies")
 
         path2 = Path.cwd().joinpath("strategies")
         self.load_strategy_class_from_folder(path2, "strategies")
@@ -501,8 +501,8 @@ class StrategyEngine(BaseEngine):
         """
         Load strategy class from certain folder.
         """
-        for suffix in ["py", "pyd"]:
-            pathname = f"{path}/*.{suffix}"
+        for suffix in ["py", "pyd", "so"]:
+            pathname: str = str(path.joinpath(f"*.{suffix}"))
             for filepath in glob.glob(pathname):
                 stem = Path(filepath).stem
                 strategy_module_name = f"{module_name}.{stem}"
