@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Set, Tuple
-from functools import lru_cache
+from functools import lru_cache, partial
 from copy import copy
 import traceback
 
@@ -14,6 +14,12 @@ from vnpy.trader.constant import Direction, Offset, Interval, Status
 from vnpy.trader.database import get_database
 from vnpy.trader.object import OrderData, TradeData, BarData
 from vnpy.trader.utility import round_to, extract_vt_symbol
+from vnpy.trader.optimize import (
+    OptimizationSetting,
+    check_optimization_setting,
+    run_bf_optimization,
+    run_ga_optimization
+)
 
 from .template import StrategyTemplate
 
@@ -44,6 +50,7 @@ class BacktestingEngine:
         self.capital: float = 1_000_000
         self.risk_free: float = 0
 
+        self.strategy_class: StrategyTemplate = None
         self.strategy: StrategyTemplate = None
         self.bars: Dict[str, BarData] = {}
         self.datetime: datetime = None
@@ -113,6 +120,7 @@ class BacktestingEngine:
 
     def add_strategy(self, strategy_class: type, setting: dict) -> None:
         """"""
+        self.strategy_class = strategy_class
         self.strategy = strategy_class(
             self, strategy_class.__name__, copy(self.vt_symbols), setting
         )
@@ -470,6 +478,48 @@ class BacktestingEngine:
 
         fig.update_layout(height=1000, width=1000)
         fig.show()
+
+    def run_bf_optimization(self, optimization_setting: OptimizationSetting, output=True):
+        """"""
+        if not check_optimization_setting(optimization_setting):
+            return
+
+        evaluate_func: callable = wrap_evaluate(self, optimization_setting.target_name)
+        results = run_bf_optimization(
+            evaluate_func,
+            optimization_setting,
+            get_target_value,
+            output=self.output,
+        )
+
+        if output:
+            for result in results:
+                msg: str = f"参数：{result[0]}, 目标：{result[1]}"
+                self.output(msg)
+
+        return results
+
+    run_optimization = run_bf_optimization
+
+    def run_ga_optimization(self, optimization_setting: OptimizationSetting, output=True):
+        """"""
+        if not check_optimization_setting(optimization_setting):
+            return
+
+        evaluate_func: callable = wrap_evaluate(self, optimization_setting.target_name)
+        results = run_ga_optimization(
+            evaluate_func,
+            optimization_setting,
+            get_target_value,
+            output=self.output
+        )
+
+        if output:
+            for result in results:
+                msg: str = f"参数：{result[0]}, 目标：{result[1]}"
+                self.output(msg)
+
+        return results
 
     def update_daily_close(self, bars: Dict[str, BarData], dt: datetime) -> None:
         """"""
@@ -861,3 +911,72 @@ def load_bar_data(
     return database.load_bar_data(
         symbol, exchange, interval, start, end
     )
+
+
+def evaluate(
+    target_name: str,
+    strategy_class: StrategyTemplate,
+    vt_symbols: List[str],
+    interval: Interval,
+    start: datetime,
+    rates: Dict[str, float],
+    slippages: Dict[str, float],
+    sizes: Dict[str, float],
+    priceticks: Dict[str, float],
+    capital: int,
+    end: datetime,
+    setting: dict
+):
+    """
+    Function for running in multiprocessing.pool
+    """
+    engine = BacktestingEngine()
+
+    engine.set_parameters(
+        vt_symbols=vt_symbols,
+        interval=interval,
+        start=start,
+        rates=rates,
+        slippages=slippages,
+        sizes=sizes,
+        priceticks=priceticks,
+        capital=capital,
+        end=end,
+    )
+
+    engine.add_strategy(strategy_class, setting)
+    engine.load_data()
+    engine.run_backtesting()
+    engine.calculate_result()
+    statistics = engine.calculate_statistics(output=False)
+
+    target_value = statistics[target_name]
+    return (str(setting), target_value, statistics)
+
+
+def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> callable:
+    """
+    Wrap evaluate function with given setting from backtesting engine.
+    """
+    func: callable = partial(
+        evaluate,
+        target_name,
+        engine.strategy_class,
+        engine.vt_symbols,
+        engine.interval,
+        engine.start,
+        engine.rates,
+        engine.slippages,
+        engine.sizes,
+        engine.priceticks,
+        engine.capital,
+        engine.end
+    )
+    return func
+
+
+def get_target_value(result: list) -> float:
+    """
+    Get target value for sorting optimization results.
+    """
+    return result[1]
