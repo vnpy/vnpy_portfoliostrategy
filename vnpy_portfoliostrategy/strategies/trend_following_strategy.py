@@ -73,7 +73,7 @@ class TrendFollowingStrategy(StrategyTemplate):
         self.rsi_buy = 50 + self.rsi_entry
         self.rsi_sell = 50 - self.rsi_entry
 
-        self.load_bars(9)
+        self.load_bars(10)
 
     def on_start(self):
         """

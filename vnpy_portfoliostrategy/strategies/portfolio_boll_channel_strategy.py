@@ -65,7 +65,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         """
         self.write_log("策略初始化")
 
-        self.load_bars(2)
+        self.load_bars(10)
 
     def on_start(self):
         """
@@ -143,6 +143,8 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
             pos_diff = target_pos - current_pos
             volume = abs(pos_diff)
             bar = bars[vt_symbol]
+            boll_up = self.boll_up[vt_symbol]
+            boll_down = self.boll_down[vt_symbol]
 
             if pos_diff > 0:
                 price = bar.close_price + self.price_add
@@ -150,13 +152,13 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 if current_pos < 0:
                     self.cover(vt_symbol, price, volume)
                 else:
-                    self.buy(vt_symbol, price, volume)
+                    self.buy(vt_symbol, boll_up, volume)
             elif pos_diff < 0:
                 price = bar.close_price - self.price_add
 
                 if current_pos > 0:
                     self.sell(vt_symbol, price, volume)
                 else:
-                    self.short(vt_symbol, price, volume)
+                    self.short(vt_symbol, boll_down, volume)
 
         self.put_event()
