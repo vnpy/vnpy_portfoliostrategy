@@ -1,41 +1,35 @@
 from typing import List, Dict
 from datetime import datetime
 
-from vnpy.trader.utility import ArrayManager
+from vnpy.trader.utility import ArrayManager, Interval
 from vnpy.trader.object import TickData, BarData
 from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 
 
-class TrendFollowingStrategy(StrategyTemplate):
+class PortfolioBollChannelStrategy(StrategyTemplate):
     """"""
 
     author = "用Python的交易员"
 
-    atr_window = 22
-    atr_ma_window = 10
-    rsi_window = 5
-    rsi_entry = 16
-    trailing_percent = 0.8
+    boll_window = 18
+    boll_dev = 3.4
+    cci_window = 10
+    atr_window = 30
+    sl_multiplier = 5.2
     fixed_size = 1
     price_add = 5
 
-    rsi_buy = 0
-    rsi_sell = 0
-
     parameters = [
-        "price_add",
+        "boll_window",
+        "boll_dev",
+        "cci_window",
         "atr_window",
-        "atr_ma_window",
-        "rsi_window",
-        "rsi_entry",
-        "trailing_percent",
-        "fixed_size"
+        "sl_multiplier",
+        "fixed_size",
+        "price_add"
     ]
-    variables = [
-        "rsi_buy",
-        "rsi_sell"
-    ]
+    variables = []
 
     def __init__(
         self,
@@ -47,9 +41,10 @@ class TrendFollowingStrategy(StrategyTemplate):
         """"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
-        self.rsi_data: Dict[str, float] = {}
-        self.atr_data: Dict[str, float] = {}
-        self.atr_ma: Dict[str, float] = {}
+        self.boll_up: Dict[str, float] = {}
+        self.boll_down: Dict[str, float] = {}
+        self.cci_value: Dict[str, float] = {}
+        self.atr_value: Dict[str, float] = {}
         self.intra_trade_high: Dict[str, float] = {}
         self.intra_trade_low: Dict[str, float] = {}
 
@@ -62,16 +57,13 @@ class TrendFollowingStrategy(StrategyTemplate):
             self.ams[vt_symbol] = ArrayManager()
             self.targets[vt_symbol] = 0
 
-        self.pbg = PortfolioBarGenerator(self.on_bars)
+        self.pbg = PortfolioBarGenerator(self.on_bars, 2, self.on_2hour_bars, Interval.HOUR)
 
     def on_init(self):
         """
         Callback when strategy is inited.
         """
         self.write_log("策略初始化")
-
-        self.rsi_buy = 50 + self.rsi_entry
-        self.rsi_sell = 50 - self.rsi_entry
 
         self.load_bars(10)
 
@@ -94,10 +86,15 @@ class TrendFollowingStrategy(StrategyTemplate):
         self.pbg.update_tick(tick)
 
     def on_bars(self, bars: Dict[str, BarData]):
+        """
+        Callback of new bars data update.
+        """
+        self.pbg.update_bars(bars)
+
+    def on_2hour_bars(self, bars: Dict[str, BarData]):
         """"""
         self.cancel_all()
 
-        # 更新K线计算RSI数值
         for vt_symbol, bar in bars.items():
             am: ArrayManager = self.ams[vt_symbol]
             am.update_bar(bar)
@@ -107,29 +104,25 @@ class TrendFollowingStrategy(StrategyTemplate):
             if not am.inited:
                 return
 
-            atr_array = am.atr(self.atr_window, array=True)
-            self.atr_data[vt_symbol] = atr_array[-1]
-            self.atr_ma[vt_symbol] = atr_array[-self.atr_ma_window:].mean()
-            self.rsi_data[vt_symbol] = am.rsi(self.rsi_window)
+            self.boll_up[vt_symbol], self.boll_down[vt_symbol] = am.boll(self.boll_window, self.boll_dev)
+            self.cci_value[vt_symbol] = am.cci(self.cci_window)
+            self.atr_value[vt_symbol] = am.atr(self.atr_window)
 
             current_pos = self.get_pos(vt_symbol)
             if current_pos == 0:
                 self.intra_trade_high[vt_symbol] = bar.high_price
                 self.intra_trade_low[vt_symbol] = bar.low_price
 
-                if self.atr_data[vt_symbol] > self.atr_ma[vt_symbol]:
-                    if self.rsi_data[vt_symbol] > self.rsi_buy:
-                        self.targets[vt_symbol] = self.fixed_size
-                    elif self.rsi_data[vt_symbol] < self.rsi_sell:
-                        self.targets[vt_symbol] = -self.fixed_size
-                    else:
-                        self.targets[vt_symbol] = 0
+                if self.cci_value[vt_symbol] > 0:
+                    self.targets[vt_symbol] = self.fixed_size
+                elif self.cci_value[vt_symbol] < 0:
+                    self.targets[vt_symbol] = -self.fixed_size
 
             elif current_pos > 0:
                 self.intra_trade_high[vt_symbol] = max(self.intra_trade_high[vt_symbol], bar.high_price)
                 self.intra_trade_low[vt_symbol] = bar.low_price
 
-                long_stop = self.intra_trade_high[vt_symbol] * (1 - self.trailing_percent / 100)
+                long_stop = self.intra_trade_high[vt_symbol] - self.atr_value[vt_symbol] * self.sl_multiplier
 
                 if bar.close_price <= long_stop:
                     self.targets[vt_symbol] = 0
@@ -138,7 +131,7 @@ class TrendFollowingStrategy(StrategyTemplate):
                 self.intra_trade_low[vt_symbol] = min(self.intra_trade_low[vt_symbol], bar.low_price)
                 self.intra_trade_high[vt_symbol] = bar.high_price
 
-                short_stop = self.intra_trade_low[vt_symbol] * (1 + self.trailing_percent / 100)
+                short_stop = self.intra_trade_low[vt_symbol] + self.atr_value[vt_symbol] * self.sl_multiplier
 
                 if bar.close_price >= short_stop:
                     self.targets[vt_symbol] = 0
@@ -150,6 +143,8 @@ class TrendFollowingStrategy(StrategyTemplate):
             pos_diff = target_pos - current_pos
             volume = abs(pos_diff)
             bar = bars[vt_symbol]
+            boll_up = self.boll_up[vt_symbol]
+            boll_down = self.boll_down[vt_symbol]
 
             if pos_diff > 0:
                 price = bar.close_price + self.price_add
@@ -157,13 +152,13 @@ class TrendFollowingStrategy(StrategyTemplate):
                 if current_pos < 0:
                     self.cover(vt_symbol, price, volume)
                 else:
-                    self.buy(vt_symbol, price, volume)
+                    self.buy(vt_symbol, boll_up, volume)
             elif pos_diff < 0:
                 price = bar.close_price - self.price_add
 
                 if current_pos > 0:
                     self.sell(vt_symbol, price, volume)
                 else:
-                    self.short(vt_symbol, price, volume)
+                    self.short(vt_symbol, boll_down, volume)
 
         self.put_event()

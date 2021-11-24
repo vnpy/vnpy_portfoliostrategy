@@ -80,6 +80,7 @@ class StrategyEngine(BaseEngine):
     def init_engine(self):
         """
         """
+        self.init_datafeed()
         self.load_strategy_class()
         self.load_strategy_setting()
         self.load_strategy_data()
@@ -96,6 +97,14 @@ class StrategyEngine(BaseEngine):
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
         self.event_engine.register(EVENT_POSITION, self.process_position_event)
+
+    def init_datafeed(self):
+        """
+        Init datafeed client.
+        """
+        result = self.datafeed.init()
+        if result:
+            self.write_log("数据服务初始化成功")
 
     def query_bar_from_datafeed(
         self, symbol: str, exchange: Exchange, interval: Interval, start: datetime, end: datetime
