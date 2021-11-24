@@ -105,7 +105,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 return
 
             self.boll_up[vt_symbol], self.boll_down[vt_symbol] = am.boll(self.boll_window, self.boll_dev)
-            self.cci_value[vt_symbol] = am.cci(self.atr_window)
+            self.cci_value[vt_symbol] = am.cci(self.cci_window)
             self.atr_value[vt_symbol] = am.atr(self.atr_window)
 
             current_pos = self.get_pos(vt_symbol)
@@ -131,7 +131,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 self.intra_trade_low[vt_symbol] = min(self.intra_trade_low[vt_symbol], bar.low_price)
                 self.intra_trade_high[vt_symbol] = bar.high_price
 
-                short_stop = self.intra_trade_high[vt_symbol] + self.atr_value[vt_symbol] * self.sl_multiplier
+                short_stop = self.intra_trade_low[vt_symbol] + self.atr_value[vt_symbol] * self.sl_multiplier
 
                 if bar.close_price >= short_stop:
                     self.targets[vt_symbol] = 0
