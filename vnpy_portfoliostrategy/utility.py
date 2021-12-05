@@ -5,7 +5,7 @@ from vnpy.trader.object import BarData, TickData, Interval
 
 
 class PortfolioBarGenerator:
-    """"""
+    """组合K线生成器"""
 
     def __init__(
         self,
@@ -13,7 +13,7 @@ class PortfolioBarGenerator:
         window: int = 0,
         on_window_bars: Callable = None,
         interval: Interval = Interval.MINUTE
-        ):
+    ):
         """Constructor"""
         self.on_bars: Callable = on_bars
 
@@ -118,7 +118,7 @@ class PortfolioBarGenerator:
             window_bar.volume += bar.volume
             window_bar.turnover += bar.turnover
             window_bar.open_interest = bar.open_interest
- 
+
         # Check if window bar completed
         if not (bar.datetime.minute + 1) % self.window:
             self.on_window_bars(self.window_bars)
@@ -146,7 +146,7 @@ class PortfolioBarGenerator:
                     open_interest=bar.open_interest
                 )
                 self.hour_bars[vt_symbol] = hour_bar
-            
+
             else:
                 # If minute is 59, update minute bar into window bar and push
                 if bar.datetime.minute == 59:
@@ -158,19 +158,19 @@ class PortfolioBarGenerator:
                         hour_bar.low_price,
                         bar.low_price
                     )
-    
+
                     hour_bar.close_price = bar.close_price
                     hour_bar.volume += bar.volume
                     hour_bar.turnover += bar.turnover
                     hour_bar.open_interest = bar.open_interest
-        
+
                     self.finished_hour_bars[vt_symbol] = hour_bar
                     self.hour_bars[vt_symbol] = None
-    
+
                 # If minute bar of new hour, then push existing window bar
                 elif bar.datetime.hour != hour_bar.datetime.hour:
                     self.finished_hour_bars[vt_symbol] = hour_bar
-    
+
                     dt = bar.datetime.replace(minute=0, second=0, microsecond=0)
                     hour_bar = BarData(
                         symbol=bar.symbol,
@@ -186,7 +186,7 @@ class PortfolioBarGenerator:
                         open_interest=bar.open_interest
                     )
                     self.hour_bars[vt_symbol] = hour_bar
-                    
+
                 # Otherwise only update minute bar
                 else:
                     hour_bar.high_price = max(
@@ -197,12 +197,12 @@ class PortfolioBarGenerator:
                         hour_bar.low_price,
                         bar.low_price
                     )
-        
+
                     hour_bar.close_price = bar.close_price
                     hour_bar.volume += bar.volume
                     hour_bar.turnover += bar.turnover
                     hour_bar.open_interest = bar.open_interest
-    
+
         # Push finished window bar
         if self.finished_hour_bars:
             self.on_hour_bars(self.finished_hour_bars)

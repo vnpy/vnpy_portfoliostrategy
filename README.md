@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-1.0.5-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-1.0.0-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-windows|linux|macos-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.7-blue.svg" />
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
@@ -13,7 +13,7 @@
 
 ## 说明
 
-针对多合约组合策略实盘的功能模块，用于实现策略初始化、策略启动、策略停止、策略参数编辑以及策略移除等任务。
+针对多合约组合策略实盘的功能模块，用于实现策略历史回测、参数优化和实盘交易等任务。
 
 ## 安装
 
