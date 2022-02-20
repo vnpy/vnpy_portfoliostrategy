@@ -43,4 +43,4 @@ class PortfolioStrategyApp(BaseApp):
     display_name = "组合策略"
     engine_class = StrategyEngine
     widget_name = "PortfolioStrategyManager"
-    icon_name = "strategy.ico"
+    icon_name = str(app_path.joinpath("ui", "strategy.ico"))
