@@ -19,8 +19,8 @@ from ..engine import StrategyEngine
 class PortfolioStrategyManager(QtWidgets.QWidget):
     """"""
 
-    signal_log = QtCore.pyqtSignal(Event)
-    signal_strategy = QtCore.pyqtSignal(Event)
+    signal_log = QtCore.Signal(Event)
+    signal_strategy = QtCore.Signal(Event)
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):
         """"""
