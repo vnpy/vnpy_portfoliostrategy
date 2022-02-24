@@ -366,7 +366,7 @@ class StrategyEngine(BaseEngine):
         self.strategies[strategy_name] = strategy
 
         # Add vt_symbol to strategy map.
-        for vt_symbol in vt_symbols:
+        for vt_symbol in strategy.vt_symbols:
             strategies = self.symbol_strategy_map[vt_symbol]
             strategies.append(strategy)
 
