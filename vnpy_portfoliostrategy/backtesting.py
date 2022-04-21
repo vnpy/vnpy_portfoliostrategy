@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Optional
 from functools import lru_cache, partial
 from copy import copy
 import traceback
@@ -61,16 +61,16 @@ class BacktestingEngine:
         self.dts: Set[datetime] = set()
 
         self.limit_order_count: int = 0
-        self.limit_orders = {}
-        self.active_limit_orders = {}
+        self.limit_orders: Dict[str, OrderData] = {}
+        self.active_limit_orders: Dict[str, OrderData] = {}
 
         self.trade_count: int = 0
         self.trades: Dict[str, TradeData] = {}
 
         self.logs: list = []
 
-        self.daily_results = {}
-        self.daily_df = None
+        self.daily_results: Dict[date, PortfolioDailyResult] = {}
+        self.daily_df: DataFrame = None
 
     def clear_data(self) -> None:
         """
@@ -152,7 +152,7 @@ class BacktestingEngine:
 
             data_count = 0
             while start < self.end:
-                end: datetime = min(end, self.end)  # Make sure end time stays within set range
+                end = min(end, self.end)  # Make sure end time stays within set range
 
                 data: List[BarData] = load_bar_data(
                     vt_symbol,
@@ -232,7 +232,7 @@ class BacktestingEngine:
         # Add trade data into daily reuslt.
         for trade in self.trades.values():
             d: date = trade.datetime.date()
-            daily_result: list = self.daily_results[d]
+            daily_result: PortfolioDailyResult = self.daily_results[d]
             daily_result.add_trade(trade)
 
         # Calculate daily result by iteration.
@@ -485,7 +485,7 @@ class BacktestingEngine:
             return
 
         evaluate_func: callable = wrap_evaluate(self, optimization_setting.target_name)
-        results = run_bf_optimization(
+        results: list = run_bf_optimization(
             evaluate_func,
             optimization_setting,
             get_target_value,
@@ -529,7 +529,7 @@ class BacktestingEngine:
         for bar in bars.values():
             close_prices[bar.vt_symbol] = bar.close_price
 
-        daily_result: PortfolioDailyResult = self.daily_results.get(d, None)
+        daily_result: Optional[PortfolioDailyResult] = self.daily_results.get(d, None)
 
         if daily_result:
             daily_result.update_close_prices(close_prices)
@@ -542,7 +542,7 @@ class BacktestingEngine:
 
         bars: Dict[str, BarData] = {}
         for vt_symbol in self.vt_symbols:
-            bar: BarData = self.history_data.get((dt, vt_symbol), None)
+            bar: Optional[BarData] = self.history_data.get((dt, vt_symbol), None)
 
             # If bar data of vt_symbol at dt exists
             if bar:
@@ -580,10 +580,10 @@ class BacktestingEngine:
         for order in list(self.active_limit_orders.values()):
             bar: BarData = self.bars[order.vt_symbol]
 
-            long_cross_price = bar.low_price
-            short_cross_price = bar.high_price
-            long_best_price = bar.open_price
-            short_best_price = bar.open_price
+            long_cross_price: float = bar.low_price
+            short_cross_price: float = bar.high_price
+            long_best_price: float = bar.open_price
+            short_best_price: float = bar.open_price
 
             # Push order update with status "not traded" (pending).
             if order.status == Status.SUBMITTING:
@@ -891,7 +891,7 @@ class PortfolioDailyResult:
         self.close_prices = close_prices
 
         for vt_symbol, close_price in close_prices.items():
-            contract_result: ContractDailyResult = self.contract_results.get(vt_symbol, None)
+            contract_result: Optional[ContractDailyResult] = self.contract_results.get(vt_symbol, None)
             if contract_result:
                 contract_result.update_close_price(close_price)
 

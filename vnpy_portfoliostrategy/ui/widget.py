@@ -19,8 +19,8 @@ from ..engine import StrategyEngine
 class PortfolioStrategyManager(QtWidgets.QWidget):
     """"""
 
-    signal_log = QtCore.Signal(Event)
-    signal_strategy = QtCore.Signal(Event)
+    signal_log: QtCore.Signal = QtCore.Signal(Event)
+    signal_strategy: QtCore.Signal = QtCore.Signal(Event)
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         """"""
@@ -44,7 +44,7 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
         # Create widgets
         self.class_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
 
-        add_button = QtWidgets.QPushButton("添加策略")
+        add_button: QtWidgets.QPushButton = QtWidgets.QPushButton("添加策略")
         add_button.clicked.connect(self.add_strategy)
 
         init_button: QtWidgets.QPushButton = QtWidgets.QPushButton("全部初始化")
@@ -105,22 +105,22 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
             EVENT_PORTFOLIO_STRATEGY, self.signal_strategy.emit
         )
 
-    def process_strategy_event(self, event) -> None:
+    def process_strategy_event(self, event: Event) -> None:
         """
         Update strategy status onto its monitor.
         """
-        data = event.data
-        strategy_name = data["strategy_name"]
+        data: dict = event.data
+        strategy_name: str = data["strategy_name"]
 
         if strategy_name in self.managers:
-            manager = self.managers[strategy_name]
+            manager: StrategyManager = self.managers[strategy_name]
             manager.update_data(data)
         else:
             manager: StrategyManager = StrategyManager(self, self.strategy_engine, data)
             self.scroll_layout.insertWidget(0, manager)
             self.managers[strategy_name] = manager
 
-    def remove_strategy(self, strategy_name) -> None:
+    def remove_strategy(self, strategy_name: str) -> None:
         """"""
         manager: StrategyManager = self.managers.pop(strategy_name)
         manager.deleteLater()

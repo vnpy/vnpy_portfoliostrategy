@@ -1,12 +1,10 @@
-""""""
-
 import importlib
 import glob
 import traceback
 from collections import defaultdict
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, List, Set, Tuple, Type, Any, Callable
+from typing import Dict, List, Set, Tuple, Type, Any, Callable, Optional
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from tzlocal import get_localzone
@@ -80,8 +78,7 @@ class StrategyEngine(BaseEngine):
         self.datafeed: BaseDatafeed = get_datafeed()
 
     def init_engine(self) -> None:
-        """
-        """
+        """"""
         self.init_datafeed()
         self.load_strategy_class()
         self.load_strategy_setting()
@@ -104,7 +101,7 @@ class StrategyEngine(BaseEngine):
         """
         Init datafeed client.
         """
-        result = self.datafeed.init()
+        result: bool = self.datafeed.init()
         if result:
             self.write_log("数据服务初始化成功")
 
@@ -142,7 +139,7 @@ class StrategyEngine(BaseEngine):
 
         self.offset_converter.update_order(order)
 
-        strategy: StrategyTemplate = self.orderid_strategy_map.get(order.vt_orderid, None)
+        strategy: Optional[StrategyTemplate] = self.orderid_strategy_map.get(order.vt_orderid, None)
         if not strategy:
             return
 
@@ -159,7 +156,7 @@ class StrategyEngine(BaseEngine):
 
         self.offset_converter.update_trade(trade)
 
-        strategy: StrategyTemplate = self.orderid_strategy_map.get(trade.vt_orderid, None)
+        strategy: Optional[StrategyTemplate] = self.orderid_strategy_map.get(trade.vt_orderid, None)
         if not strategy:
             return
 
@@ -185,7 +182,7 @@ class StrategyEngine(BaseEngine):
         """
         Send a new order to server.
         """
-        contract: ContractData = self.main_engine.get_contract(vt_symbol)
+        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
         if not contract:
             self.write_log(f"委托失败，找不到合约：{vt_symbol}", strategy)
             return ""
@@ -233,7 +230,7 @@ class StrategyEngine(BaseEngine):
 
     def cancel_order(self, strategy: StrategyTemplate, vt_orderid: str) -> None:
         """"""
-        order: OrderData = self.main_engine.get_order(vt_orderid)
+        order: Optional[OrderData] = self.main_engine.get_order(vt_orderid)
         if not order:
             self.write_log(f"撤单失败，找不到委托{vt_orderid}", strategy)
             return
@@ -245,7 +242,7 @@ class StrategyEngine(BaseEngine):
         """
         Return contract pricetick data.
         """
-        contract: ContractData = self.main_engine.get_contract(vt_symbol)
+        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
 
         if contract:
             return contract.pricetick
@@ -274,7 +271,7 @@ class StrategyEngine(BaseEngine):
 
         for dt in dts:
             for vt_symbol in vt_symbols:
-                bar: BarData = history_data.get((dt, vt_symbol), None)
+                bar: Optional[BarData] = history_data.get((dt, vt_symbol), None)
 
                 # If bar data of vt_symbol at dt exists
                 if bar:
@@ -283,7 +280,7 @@ class StrategyEngine(BaseEngine):
                 elif vt_symbol in bars:
                     old_bar: BarData = bars[vt_symbol]
 
-                    bar: BarData = BarData(
+                    bar = BarData(
                         symbol=old_bar.symbol,
                         exchange=old_bar.exchange,
                         datetime=dt,
@@ -302,8 +299,8 @@ class StrategyEngine(BaseEngine):
         symbol, exchange = extract_vt_symbol(vt_symbol)
         end: datetime = datetime.now(get_localzone())
         start: datetime = end - timedelta(days)
-        contract: ContractData = self.main_engine.get_contract(vt_symbol)
-        data: list = []
+        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+        data: List[BarData]
 
         # Query bars from gateway if available
         if contract and contract.history_data:
@@ -314,13 +311,13 @@ class StrategyEngine(BaseEngine):
                 start=start,
                 end=end
             )
-            data: List[BarData] = self.main_engine.query_history(req, contract.gateway_name)
+            data = self.main_engine.query_history(req, contract.gateway_name)
         # Try to query bars from datafeed, if not found, load from database.
         else:
-            data: List[BarData] = self.query_bar_from_datafeed(symbol, exchange, interval, start, end)
+            data = self.query_bar_from_datafeed(symbol, exchange, interval, start, end)
 
         if not data:
-            data: List[BarData] = self.database.load_bar_data(
+            data = self.database.load_bar_data(
                 symbol=symbol,
                 exchange=exchange,
                 interval=interval,
@@ -358,7 +355,7 @@ class StrategyEngine(BaseEngine):
             self.write_log(f"创建策略失败，存在重名{strategy_name}")
             return
 
-        strategy_class: StrategyTemplate = self.classes.get(class_name, None)
+        strategy_class: Optional[StrategyTemplate] = self.classes.get(class_name, None)
         if not strategy_class:
             self.write_log(f"创建策略失败，找不到策略类{class_name}")
             return
@@ -384,7 +381,7 @@ class StrategyEngine(BaseEngine):
         """
         Init strategies in queue.
         """
-        strategy: list = self.strategies[strategy_name]
+        strategy: StrategyTemplate = self.strategies[strategy_name]
 
         if strategy.inited:
             self.write_log(f"{strategy_name}已经完成初始化，禁止重复操作")
@@ -396,10 +393,10 @@ class StrategyEngine(BaseEngine):
         self.call_strategy_func(strategy, strategy.on_init)
 
         # Restore strategy data(variables)
-        data: dict = self.strategy_data.get(strategy_name, None)
+        data: Optional[dict] = self.strategy_data.get(strategy_name, None)
         if data:
             for name in strategy.variables:
-                value = data.get(name, None)
+                value: Optional[Any] = data.get(name, None)
                 if name == "pos":
                     pos = getattr(strategy, name)
                     pos.update(value)
@@ -408,7 +405,7 @@ class StrategyEngine(BaseEngine):
 
         # Subscribe market data
         for vt_symbol in strategy.vt_symbols:
-            contract: ContractData = self.main_engine.get_contract(vt_symbol)
+            contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
             if contract:
                 req: SubscribeRequest = SubscribeRequest(
                     symbol=contract.symbol, exchange=contract.exchange)

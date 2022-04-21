@@ -1,7 +1,7 @@
 """"""
 from abc import ABC
 from copy import copy
-from typing import Dict, Set, List, TYPE_CHECKING
+from typing import Dict, Set, List, TYPE_CHECKING, Optional
 from collections import defaultdict
 
 from vnpy.trader.constant import Interval, Direction, Offset
@@ -217,7 +217,7 @@ class StrategyTemplate(ABC):
         """"""
         return self.pos.get(vt_symbol, 0)
 
-    def get_order(self, vt_orderid: str) -> OrderData:
+    def get_order(self, vt_orderid: str) -> Optional[OrderData]:
         """"""
         return self.orders.get(vt_orderid, None)
 
