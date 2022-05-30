@@ -400,7 +400,7 @@ class StrategyEngine(BaseEngine):
                 if name == "pos":
                     pos = getattr(strategy, name)
                     pos.update(value)
-                elif value:
+                elif value is not None:
                     setattr(strategy, name, value)
 
         # Subscribe market data
