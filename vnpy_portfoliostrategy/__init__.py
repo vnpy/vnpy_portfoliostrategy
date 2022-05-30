@@ -37,10 +37,10 @@ from .backtesting import BacktestingEngine
 class PortfolioStrategyApp(BaseApp):
     """"""
 
-    app_name = APP_NAME
-    app_module = __module__
-    app_path = Path(__file__).parent
-    display_name = "组合策略"
-    engine_class = StrategyEngine
-    widget_name = "PortfolioStrategyManager"
-    icon_name = str(app_path.joinpath("ui", "strategy.ico"))
+    app_name: str = APP_NAME
+    app_module: str = __module__
+    app_path: Path = Path(__file__).parent
+    display_name: str = "组合策略"
+    engine_class: StrategyEngine = StrategyEngine
+    widget_name: str = "PortfolioStrategyManager"
+    icon_name: str = str(app_path.joinpath("ui", "strategy.ico"))

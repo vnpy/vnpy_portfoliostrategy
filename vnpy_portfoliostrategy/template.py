@@ -1,7 +1,7 @@
 """"""
 from abc import ABC
 from copy import copy
-from typing import Dict, Set, List, TYPE_CHECKING
+from typing import Dict, Set, List, TYPE_CHECKING, Optional
 from collections import defaultdict
 
 from vnpy.trader.constant import Interval, Direction, Offset
@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 class StrategyTemplate(ABC):
     """"""
 
-    author = ""
-    parameters = []
-    variables = []
+    author: str = ""
+    parameters: list = []
+    variables: list = []
 
     def __init__(
         self,
@@ -25,7 +25,7 @@ class StrategyTemplate(ABC):
         strategy_name: str,
         vt_symbols: List[str],
         setting: dict,
-    ):
+    ) -> None:
         """"""
         self.strategy_engine: "StrategyEngine" = strategy_engine
         self.strategy_name: str = strategy_name
@@ -40,7 +40,7 @@ class StrategyTemplate(ABC):
 
         # Copy a new variables list here to avoid duplicate insert when multiple
         # strategy instances are created with the same strategy class.
-        self.variables: List = copy(self.variables)
+        self.variables: list = copy(self.variables)
         self.variables.insert(0, "inited")
         self.variables.insert(1, "trading")
         self.variables.insert(2, "pos")
@@ -60,7 +60,7 @@ class StrategyTemplate(ABC):
         """
         Get default parameters dict of strategy class.
         """
-        class_parameters = {}
+        class_parameters: dict = {}
         for name in cls.parameters:
             class_parameters[name] = getattr(cls, name)
         return class_parameters
@@ -69,7 +69,7 @@ class StrategyTemplate(ABC):
         """
         Get strategy parameters dict.
         """
-        strategy_parameters = {}
+        strategy_parameters: dict = {}
         for name in self.parameters:
             strategy_parameters[name] = getattr(self, name)
         return strategy_parameters
@@ -78,7 +78,7 @@ class StrategyTemplate(ABC):
         """
         Get strategy variables dict.
         """
-        strategy_variables = {}
+        strategy_variables: dict = {}
         for name in self.variables:
             strategy_variables[name] = getattr(self, name)
         return strategy_variables
@@ -87,7 +87,7 @@ class StrategyTemplate(ABC):
         """
         Get strategy data.
         """
-        strategy_data = {
+        strategy_data: dict = {
             "strategy_name": self.strategy_name,
             "vt_symbols": self.vt_symbols,
             "class_name": self.__class__.__name__,
@@ -188,7 +188,7 @@ class StrategyTemplate(ABC):
         Send a new order.
         """
         if self.trading:
-            vt_orderids = self.strategy_engine.send_order(
+            vt_orderids: list = self.strategy_engine.send_order(
                 self, vt_symbol, direction, offset, price, volume, lock, net
             )
 
@@ -217,7 +217,7 @@ class StrategyTemplate(ABC):
         """"""
         return self.pos.get(vt_symbol, 0)
 
-    def get_order(self, vt_orderid: str) -> OrderData:
+    def get_order(self, vt_orderid: str) -> Optional[OrderData]:
         """"""
         return self.orders.get(vt_orderid, None)
 

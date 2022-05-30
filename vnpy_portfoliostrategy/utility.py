@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from vnpy.trader.object import BarData, TickData, Interval
 
@@ -13,7 +13,7 @@ class PortfolioBarGenerator:
         window: int = 0,
         on_window_bars: Callable = None,
         interval: Interval = Interval.MINUTE
-    ):
+    ) -> None:
         """Constructor"""
         self.on_bars: Callable = on_bars
 
@@ -44,7 +44,7 @@ class PortfolioBarGenerator:
             self.on_bars(self.bars)
             self.bars = {}
 
-        bar = self.bars.get(tick.vt_symbol, None)
+        bar: Optional[BarData] = self.bars.get(tick.vt_symbol, None)
         if not bar:
             bar = BarData(
                 symbol=tick.symbol,
@@ -66,7 +66,7 @@ class PortfolioBarGenerator:
             bar.open_interest = tick.open_interest
             bar.datetime = tick.datetime
 
-        last_tick = self.last_ticks.get(tick.vt_symbol, None)
+        last_tick: Optional[TickData] = self.last_ticks.get(tick.vt_symbol, None)
         if last_tick:
             bar.volume += max(tick.volume - last_tick.volume, 0)
             bar.turnover += max(tick.turnover - last_tick.turnover, 0)
@@ -86,11 +86,11 @@ class PortfolioBarGenerator:
     def update_bar_minute_window(self, bars: Dict[str, BarData]) -> None:
         """"""
         for vt_symbol, bar in bars.items():
-            window_bar = self.window_bars.get(vt_symbol, None)
+            window_bar: Optional[BarData] = self.window_bars.get(vt_symbol, None)
 
             # If not inited, create window bar object
             if not window_bar:
-                dt = bar.datetime.replace(second=0, microsecond=0)
+                dt: datetime = bar.datetime.replace(second=0, microsecond=0)
                 window_bar = BarData(
                     symbol=bar.symbol,
                     exchange=bar.exchange,
@@ -127,11 +127,11 @@ class PortfolioBarGenerator:
     def update_bar_hour_window(self, bars: Dict[str, BarData]) -> None:
         """"""
         for vt_symbol, bar in bars.items():
-            hour_bar = self.hour_bars.get(vt_symbol, None)
+            hour_bar: Optional[BarData] = self.hour_bars.get(vt_symbol, None)
 
             # If not inited, create window bar object
             if not hour_bar:
-                dt = bar.datetime.replace(minute=0, second=0, microsecond=0)
+                dt: datetime = bar.datetime.replace(minute=0, second=0, microsecond=0)
                 hour_bar = BarData(
                     symbol=bar.symbol,
                     exchange=bar.exchange,
@@ -171,7 +171,7 @@ class PortfolioBarGenerator:
                 elif bar.datetime.hour != hour_bar.datetime.hour:
                     self.finished_hour_bars[vt_symbol] = hour_bar
 
-                    dt = bar.datetime.replace(minute=0, second=0, microsecond=0)
+                    dt: datetime = bar.datetime.replace(minute=0, second=0, microsecond=0)
                     hour_bar = BarData(
                         symbol=bar.symbol,
                         exchange=bar.exchange,
@@ -214,7 +214,7 @@ class PortfolioBarGenerator:
             self.on_window_bars(bars)
         else:
             for vt_symbol, bar in bars.items():
-                window_bar = self.window_bars.get(vt_symbol, None)
+                window_bar: Optional[BarData] = self.window_bars.get(vt_symbol, None)
                 if not window_bar:
                     window_bar = BarData(
                         symbol=bar.symbol,
