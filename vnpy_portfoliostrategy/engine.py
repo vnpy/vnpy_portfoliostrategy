@@ -210,6 +210,8 @@ class StrategyEngine(BaseEngine):
         vt_orderids: list = []
 
         for req in req_list:
+            req.reference = strategy.strategy_name      # Add strategy name as order reference
+
             vt_orderid: str = self.main_engine.send_order(
                 req, contract.gateway_name)
 
