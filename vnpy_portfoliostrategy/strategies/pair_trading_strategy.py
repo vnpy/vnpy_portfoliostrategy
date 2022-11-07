@@ -151,11 +151,11 @@ class PairTradingStrategy(StrategyTemplate):
 
         if not leg1_pos:
             if self.current_spread >= self.boll_up:
-                self.targets[self.leg1_symbol] = -1
-                self.targets[self.leg2_symbol] = 1
+                self.targets[self.leg1_symbol] = - self.fixed_size
+                self.targets[self.leg2_symbol] = self.fixed_size
             elif self.current_spread <= self.boll_down:
-                self.targets[self.leg1_symbol] = 1
-                self.targets[self.leg2_symbol] = -1
+                self.targets[self.leg1_symbol] = self.fixed_size
+                self.targets[self.leg2_symbol] = - self.fixed_size
         elif leg1_pos > 0:
             if self.current_spread >= self.boll_mid:
                 self.targets[self.leg1_symbol] = 0
