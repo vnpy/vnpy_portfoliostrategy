@@ -7,7 +7,6 @@ from types import ModuleType
 from typing import Dict, List, Set, Tuple, Type, Any, Callable, Optional
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
-from tzlocal import get_localzone_name
 
 from vnpy.event import Event, EventEngine
 from vnpy.trader.engine import BaseEngine, MainEngine
@@ -37,10 +36,10 @@ from vnpy.trader.constant import (
     Exchange,
     Offset
 )
-from vnpy.trader.utility import load_json, save_json, extract_vt_symbol, round_to, ZoneInfo
+from vnpy.trader.utility import load_json, save_json, extract_vt_symbol, round_to
 from vnpy.trader.datafeed import BaseDatafeed, get_datafeed
 from vnpy.trader.converter import OffsetConverter
-from vnpy.trader.database import BaseDatabase, get_database
+from vnpy.trader.database import BaseDatabase, get_database, DB_TZ
 
 from .base import (
     APP_NAME,
@@ -295,7 +294,7 @@ class StrategyEngine(BaseEngine):
     def load_bar(self, vt_symbol: str, days: int, interval: Interval) -> List[BarData]:
         """"""
         symbol, exchange = extract_vt_symbol(vt_symbol)
-        end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
+        end: datetime = datetime.now(DB_TZ)
         start: datetime = end - timedelta(days)
         contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
         data: List[BarData]
