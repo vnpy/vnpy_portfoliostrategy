@@ -192,7 +192,7 @@ class StrategyTemplate(ABC):
         self.target_data[vt_symbol] = target
 
     def execute_target_orders(self, bars: Dict[str, BarData]) -> None:
-        """执行目标交易"""
+        """执行目标调仓交易"""
         self.cancel_all()
 
         # 只发出当前K线切片有行情的合约的委托
@@ -260,7 +260,7 @@ class StrategyTemplate(ABC):
         direction: Direction,
         reference: float
     ) -> float:
-        """基于参考价格和交易方向，计算目标交易的委托价格"""
+        """计算调仓委托价格（根据需求重载实现）"""
         return reference
 
     def get_order(self, vt_orderid: str) -> Optional[OrderData]:

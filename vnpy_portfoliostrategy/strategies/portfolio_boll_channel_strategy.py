@@ -39,8 +39,8 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         strategy_name: str,
         vt_symbols: List[str],
         setting: dict
-    ):
-        """"""
+    ) -> None:
+        """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
         self.boll_up: Dict[str, float] = {}
@@ -59,44 +59,36 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
 
         self.pbg = PortfolioBarGenerator(self.on_bars, 2, self.on_2hour_bars, Interval.HOUR)
 
-    def on_init(self):
-        """
-        Callback when strategy is inited.
-        """
+    def on_init(self) -> None:
+        """策略初始化回调"""
         self.write_log("策略初始化")
 
         self.load_bars(10)
 
-    def on_start(self):
-        """
-        Callback when strategy is started.
-        """
+    def on_start(self) -> None:
+        """策略启动回调"""
         self.write_log("策略启动")
 
-    def on_stop(self):
-        """
-        Callback when strategy is stopped.
-        """
+    def on_stop(self) -> None:
+        """策略停止回调"""
         self.write_log("策略停止")
 
-    def on_tick(self, tick: TickData):
-        """
-        Callback of new tick data update.
-        """
+    def on_tick(self, tick: TickData) -> None:
+        """行情推送回调"""
         self.pbg.update_tick(tick)
 
-    def on_bars(self, bars: Dict[str, BarData]):
-        """
-        Callback of new bars data update.
-        """
+    def on_bars(self, bars: Dict[str, BarData]) -> None:
+        """K线切片回调"""
         self.pbg.update_bars(bars)
 
-    def on_2hour_bars(self, bars: Dict[str, BarData]):
-        """"""
+    def on_2hour_bars(self, bars: Dict[str, BarData]) -> None:
+        """2小时K线回调"""
+        # 更新到缓存序列
         for vt_symbol, bar in bars.items():
             am: ArrayManager = self.ams[vt_symbol]
             am.update_bar(bar)
 
+        # 计算目标仓位
         for vt_symbol, bar in bars.items():
             am: ArrayManager = self.ams[vt_symbol]
             if not am.inited:
@@ -134,8 +126,10 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 if bar.close_price >= short_stop:
                     self.set_target(vt_symbol, 0)
 
+        # 执行调仓交易
         self.execute_target_orders(bars)
 
+        # 推送界面更新
         self.put_event()
 
     def calculate_target_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
