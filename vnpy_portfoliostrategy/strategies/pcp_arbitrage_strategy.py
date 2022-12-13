@@ -1,13 +1,15 @@
 from typing import List, Dict
 from datetime import datetime
 
-from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 from vnpy.trader.utility import BarGenerator, extract_vt_symbol
 from vnpy.trader.object import TickData, BarData
+from vnpy.trader.constant import Direction
+
+from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 
 
 class PcpArbitrageStrategy(StrategyTemplate):
-    """"""
+    """期权平价套利策略"""
 
     author = "用Python的交易员"
 
@@ -22,9 +24,6 @@ class PcpArbitrageStrategy(StrategyTemplate):
     futures_pos = 0
     call_pos = 0
     put_pos = 0
-    futures_target = 0
-    call_target = 0
-    put_target = 0
 
     parameters = [
         "entry_level",
@@ -39,9 +38,6 @@ class PcpArbitrageStrategy(StrategyTemplate):
         "futures_pos",
         "call_pos",
         "put_pos",
-        "futures_target",
-        "call_target",
-        "put_target",
     ]
 
     def __init__(
@@ -137,52 +133,33 @@ class PcpArbitrageStrategy(StrategyTemplate):
         # Calculate target position
         if not self.futures_pos:
             if self.current_spread > self.entry_level:
-                self.call_target = -self.fixed_size
-                self.put_target = self.fixed_size
-                self.futures_target = self.fixed_size
+                self.set_target(self.call_symbol, -self.fixed_size)
+                self.set_target(self.put_symbol, self.fixed_size)
+                self.set_target(self.futures_symbol, self.fixed_size)
             elif self.current_spread < -self.entry_level:
-                self.call_target = self.fixed_size
-                self.put_target = -self.fixed_size
-                self.futures_target = -self.fixed_size
+                self.set_target(self.call_symbol, self.fixed_size)
+                self.set_target(self.put_symbol, -self.fixed_size)
+                self.set_target(self.futures_symbol, -self.fixed_size)
         elif self.futures_pos > 0:
             if self.current_spread <= 0:
-                self.call_target = 0
-                self.put_target = 0
-                self.futures_target = 0
+                self.set_target(self.call_symbol, 0)
+                self.set_target(self.put_symbol, 0)
+                self.set_target(self.futures_symbol, 0)
         else:
             if self.current_spread >= 0:
-                self.call_target = 0
-                self.put_target = 0
-                self.futures_target = 0
+                self.set_target(self.call_symbol, 0)
+                self.set_target(self.put_symbol, 0)
+                self.set_target(self.futures_symbol, 0)
 
-        # Execute orders
-        target = {
-            self.call_symbol: self.call_target,
-            self.put_symbol: self.put_target,
-            self.futures_symbol: self.futures_target
-        }
-
-        for vt_symbol in self.vt_symbols:
-            target_pos = target[vt_symbol]
-            current_pos = self.get_pos(vt_symbol)
-
-            pos_diff = target_pos - current_pos
-            volume = abs(pos_diff)
-            bar = bars[vt_symbol]
-
-            if pos_diff > 0:
-                price = bar.close_price + self.price_add
-
-                if current_pos < 0:
-                    self.cover(vt_symbol, price, volume)
-                else:
-                    self.buy(vt_symbol, price, volume)
-            elif pos_diff < 0:
-                price = bar.close_price - self.price_add
-
-                if current_pos > 0:
-                    self.sell(vt_symbol, price, volume)
-                else:
-                    self.short(vt_symbol, price, volume)
+        self.execute_target_orders()
 
         self.put_event()
+
+    def calculate_target_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+        """计算目标交易的委托价格"""
+        if direction == Direction.LONG:
+            price: float = reference + self.price_add
+        else:
+            price: float = reference - self.price_add
+
+        return price

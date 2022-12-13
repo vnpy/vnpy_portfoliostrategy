@@ -3,13 +3,15 @@ from datetime import datetime
 
 import numpy as np
 
-from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 from vnpy.trader.utility import BarGenerator
 from vnpy.trader.object import TickData, BarData
+from vnpy.trader.constant import Direction
+
+from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 
 
 class PairTradingStrategy(StrategyTemplate):
-    """"""
+    """配对交易策略"""
 
     author = "用Python的交易员"
 
@@ -55,7 +57,6 @@ class PairTradingStrategy(StrategyTemplate):
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
         self.bgs: Dict[str, BarGenerator] = {}
-        self.targets: Dict[str, int] = {}
         self.last_tick_time: datetime = None
 
         self.spread_count: int = 0
@@ -69,7 +70,6 @@ class PairTradingStrategy(StrategyTemplate):
             pass
 
         for vt_symbol in self.vt_symbols:
-            self.targets[vt_symbol] = 0
             self.bgs[vt_symbol] = BarGenerator(on_bar)
 
     def on_init(self):
@@ -112,8 +112,6 @@ class PairTradingStrategy(StrategyTemplate):
 
     def on_bars(self, bars: Dict[str, BarData]):
         """"""
-        self.cancel_all()
-
         # Return if one leg data is missing
         if self.leg1_symbol not in bars or self.leg2_symbol not in bars:
             return
@@ -151,42 +149,29 @@ class PairTradingStrategy(StrategyTemplate):
 
         if not leg1_pos:
             if self.current_spread >= self.boll_up:
-                self.targets[self.leg1_symbol] = - self.fixed_size
-                self.targets[self.leg2_symbol] = self.fixed_size
+                self.set_target(self.leg1_symbol, -self.fixed_size)
+                self.set_target(self.leg2_symbol, self.fixed_size)
             elif self.current_spread <= self.boll_down:
-                self.targets[self.leg1_symbol] = self.fixed_size
-                self.targets[self.leg2_symbol] = - self.fixed_size
+                self.set_target(self.leg1_symbol, self.fixed_size)
+                self.set_target(self.leg2_symbol, -self.fixed_size)
         elif leg1_pos > 0:
             if self.current_spread >= self.boll_mid:
-                self.targets[self.leg1_symbol] = 0
-                self.targets[self.leg2_symbol] = 0
+                self.set_target(self.leg1_symbol, 0)
+                self.set_target(self.leg2_symbol, 0)
         else:
             if self.current_spread <= self.boll_mid:
-                self.targets[self.leg1_symbol] = 0
-                self.targets[self.leg2_symbol] = 0
+                self.set_target(self.leg1_symbol, 0)
+                self.set_target(self.leg2_symbol, 0)
 
-        # Execute orders
-        for vt_symbol in self.vt_symbols:
-            target_pos = self.targets[vt_symbol]
-            current_pos = self.get_pos(vt_symbol)
-
-            pos_diff = target_pos - current_pos
-            volume = abs(pos_diff)
-            bar = bars[vt_symbol]
-
-            if pos_diff > 0:
-                price = bar.close_price + self.price_add
-
-                if current_pos < 0:
-                    self.cover(vt_symbol, price, volume)
-                else:
-                    self.buy(vt_symbol, price, volume)
-            elif pos_diff < 0:
-                price = bar.close_price - self.price_add
-
-                if current_pos > 0:
-                    self.sell(vt_symbol, price, volume)
-                else:
-                    self.short(vt_symbol, price, volume)
+        self.execute_target_orders(bars)
 
         self.put_event()
+
+    def calculate_target_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+        """计算目标交易的委托价格"""
+        if direction == Direction.LONG:
+            price: float = reference + self.price_add
+        else:
+            price: float = reference - self.price_add
+
+        return price
