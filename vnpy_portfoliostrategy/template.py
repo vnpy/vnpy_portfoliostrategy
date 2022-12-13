@@ -1,4 +1,3 @@
-""""""
 from abc import ABC
 from copy import copy
 from typing import Dict, Set, List, TYPE_CHECKING, Optional
@@ -13,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class StrategyTemplate(ABC):
-    """"""
+    """组合策略模板"""
 
     author: str = ""
     parameters: list = []
@@ -24,69 +23,64 @@ class StrategyTemplate(ABC):
         strategy_engine: "StrategyEngine",
         strategy_name: str,
         vt_symbols: List[str],
-        setting: dict,
+        setting: dict
     ) -> None:
-        """"""
+        """构造函数"""
         self.strategy_engine: "StrategyEngine" = strategy_engine
         self.strategy_name: str = strategy_name
         self.vt_symbols: List[str] = vt_symbols
 
+        # 状态控制变量
         self.inited: bool = False
         self.trading: bool = False
-        self.pos: Dict[str, int] = defaultdict(int)
 
+        # 持仓数据字典
+        self.pos_data: Dict[str, int] = defaultdict(int)        # 实际持仓
+        self.target_data: Dict[str, int] = defaultdict(int)     # 目标持仓
+
+        # 委托缓存容器
         self.orders: Dict[str, OrderData] = {}
         self.active_orderids: Set[str] = set()
 
-        # Copy a new variables list here to avoid duplicate insert when multiple
-        # strategy instances are created with the same strategy class.
+        # 复制变量名列表，插入默认变量内容
         self.variables: list = copy(self.variables)
         self.variables.insert(0, "inited")
         self.variables.insert(1, "trading")
-        self.variables.insert(2, "pos")
+        self.variables.insert(2, "pos_data")
 
+        # 设置策略参数
         self.update_setting(setting)
 
     def update_setting(self, setting: dict) -> None:
-        """
-        Update strategy parameter wtih value in setting dict.
-        """
+        """设置策略参数"""
         for name in self.parameters:
             if name in setting:
                 setattr(self, name, setting[name])
 
     @classmethod
-    def get_class_parameters(cls) -> Dict:
-        """
-        Get default parameters dict of strategy class.
-        """
+    def get_class_parameters(cls) -> dict:
+        """查取策略默认参数"""
         class_parameters: dict = {}
         for name in cls.parameters:
             class_parameters[name] = getattr(cls, name)
         return class_parameters
 
-    def get_parameters(self) -> Dict:
-        """
-        Get strategy parameters dict.
-        """
+    def get_parameters(self) -> dict:
+        """查询策略参数"""
         strategy_parameters: dict = {}
         for name in self.parameters:
             strategy_parameters[name] = getattr(self, name)
         return strategy_parameters
 
-    def get_variables(self) -> Dict:
-        """
-        Get strategy variables dict.
-        """
+    def get_variables(self) -> dict:
+        """查询策略变量"""
         strategy_variables: dict = {}
         for name in self.variables:
             strategy_variables[name] = getattr(self, name)
         return strategy_variables
 
-    def get_data(self) -> Dict:
-        """
-        Get strategy data.
-        """
+    def get_data(self) -> dict:
+        """查询策略状态数据"""
         strategy_data: dict = {
             "strategy_name": self.strategy_name,
             "vt_symbols": self.vt_symbols,
@@ -99,79 +93,57 @@ class StrategyTemplate(ABC):
 
     @virtual
     def on_init(self) -> None:
-        """
-        Callback when strategy is inited.
-        """
+        """策略初始化回调"""
         pass
 
     @virtual
     def on_start(self) -> None:
-        """
-        Callback when strategy is started.
-        """
+        """策略启动回调"""
         pass
 
     @virtual
     def on_stop(self) -> None:
-        """
-        Callback when strategy is stopped.
-        """
+        """策略停止回调"""
         pass
 
     @virtual
     def on_tick(self, tick: TickData) -> None:
-        """
-        Callback of new tick data update.
-        """
+        """行情推送回调"""
         pass
 
     @virtual
     def on_bars(self, bars: Dict[str, BarData]) -> None:
-        """
-        Callback of new bar data update.
-        """
+        """K线切片回调"""
         pass
 
     def update_trade(self, trade: TradeData) -> None:
-        """
-        Callback of new trade data update.
-        """
+        """成交数据更新"""
         if trade.direction == Direction.LONG:
-            self.pos[trade.vt_symbol] += trade.volume
+            self.pos_data[trade.vt_symbol] += trade.volume
         else:
-            self.pos[trade.vt_symbol] -= trade.volume
+            self.pos_data[trade.vt_symbol] -= trade.volume
 
     def update_order(self, order: OrderData) -> None:
-        """
-        Callback of new order data update.
-        """
+        """委托数据更新"""
         self.orders[order.vt_orderid] = order
 
         if not order.is_active() and order.vt_orderid in self.active_orderids:
             self.active_orderids.remove(order.vt_orderid)
 
     def buy(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> List[str]:
-        """
-        Send buy order to open a long position.
-        """
+        """买入开仓"""
         return self.send_order(vt_symbol, Direction.LONG, Offset.OPEN, price, volume, lock, net)
 
     def sell(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> List[str]:
-        """
-        Send sell order to close a long position.
-        """
+        """卖出平仓"""
         return self.send_order(vt_symbol, Direction.SHORT, Offset.CLOSE, price, volume, lock, net)
 
     def short(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> List[str]:
-        """
-        Send short order to open as short position.
-        """
+        """卖出开仓"""
         return self.send_order(vt_symbol, Direction.SHORT, Offset.OPEN, price, volume, lock, net)
 
     def cover(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> List[str]:
-        """
-        Send cover order to close a short position.
-        """
+        """买入平仓"""
         return self.send_order(vt_symbol, Direction.LONG, Offset.CLOSE, price, volume, lock, net)
 
     def send_order(
@@ -184,9 +156,7 @@ class StrategyTemplate(ABC):
         lock: bool = False,
         net: bool = False,
     ) -> List[str]:
-        """
-        Send a new order.
-        """
+        """发送委托"""
         if self.trading:
             vt_orderids: list = self.strategy_engine.send_order(
                 self, vt_symbol, direction, offset, price, volume, lock, net
@@ -200,66 +170,130 @@ class StrategyTemplate(ABC):
             return []
 
     def cancel_order(self, vt_orderid: str) -> None:
-        """
-        Cancel an existing order.
-        """
+        """撤销委托"""
         if self.trading:
             self.strategy_engine.cancel_order(self, vt_orderid)
 
     def cancel_all(self) -> None:
-        """
-        Cancel all orders sent by strategy.
-        """
+        """全撤活动委托"""
         for vt_orderid in list(self.active_orderids):
             self.cancel_order(vt_orderid)
 
     def get_pos(self, vt_symbol: str) -> int:
-        """"""
-        return self.pos.get(vt_symbol, 0)
+        """查询当前持仓"""
+        return self.pos_data.get(vt_symbol, 0)
+
+    def get_target(self, vt_symbol: str) -> int:
+        """查询目标仓位"""
+        return self.target_data[vt_symbol]
+
+    def set_target(self, vt_symbol: str, target: int) -> None:
+        """设置目标仓位"""
+        self.target_data[vt_symbol] = target
+
+    def execute_target_orders(self, bars: Dict[str, BarData]) -> None:
+        """执行目标交易"""
+        self.cancel_all()
+
+        # 只发出当前K线切片有行情的合约的委托
+        for vt_symbol, bar in bars.items():
+            # 计算仓差
+            target: int = self.get_target(vt_symbol)
+            pos: int = self.get_target(vt_symbol)
+            diff: int = target - pos
+
+            # 多头
+            if diff > 0:
+                # 计算多头委托价
+                order_price: float = self.calculate_target_price(
+                    vt_symbol,
+                    Direction.LONG,
+                    bar.close_price
+                )
+
+                # 计算买平和买开数量
+                cover_volume: int = 0
+                buy_volume: int = 0
+
+                if pos < 0:
+                    cover_volume = min(diff, abs(pos))
+                    buy_volume = diff - cover_volume
+                else:
+                    buy_volume = diff
+
+                # 发出对应委托
+                if cover_volume:
+                    self.cover(vt_symbol, order_price, cover_volume)
+
+                if buy_volume:
+                    self.buy(vt_symbol, order_price, buy_volume)
+            # 空头
+            elif diff > 0:
+                # 计算空头委托价
+                order_price: float = self.calculate_target_price(
+                    vt_symbol,
+                    Direction.SHORT,
+                    bar.close_price
+                )
+
+                # 计算卖平和卖开数量
+                sell_volume: int = 0
+                short_volume: int = 0
+
+                if pos > 0:
+                    sell_volume = min(abs(diff), pos)
+                    short_volume = abs(diff) - cover_volume
+                else:
+                    short_volume = abs(diff)
+
+                # 发出对应委托
+                if sell_volume:
+                    self.sell(vt_symbol, order_price, sell_volume)
+
+                if short_volume:
+                    self.short(vt_symbol, order_price, short_volume)
+
+    @virtual
+    def calculate_target_price(
+        self,
+        vt_symbol: str,
+        direction: Direction,
+        reference: float
+    ) -> float:
+        """基于参考价格和交易方向，计算目标交易的委托价格"""
+        return reference
 
     def get_order(self, vt_orderid: str) -> Optional[OrderData]:
-        """"""
+        """查询委托数据"""
         return self.orders.get(vt_orderid, None)
 
     def get_all_active_orderids(self) -> List[OrderData]:
-        """"""
+        """获取全部活动状态的委托号"""
         return list(self.active_orderids)
 
     def write_log(self, msg: str) -> None:
-        """
-        Write a log message.
-        """
+        """记录日志"""
         self.strategy_engine.write_log(msg, self)
 
     def get_pricetick(self, vt_symbol) -> float:
-        """
-        Return pricetick data of trading contract.
-        """
+        """查询合约最小价格跳动"""
         return self.strategy_engine.get_pricetick(self, vt_symbol)
 
     def load_bars(self, days: int, interval: Interval = Interval.MINUTE) -> None:
-        """
-        Load historical bar data for initializing strategy.
-        """
+        """加载历史K线数据来执行初始化"""
         self.strategy_engine.load_bars(self, days, interval)
 
     def put_event(self) -> None:
-        """
-        Put an strategy data event for ui update.
-        """
+        """推送策略数据更新事件"""
         if self.inited:
             self.strategy_engine.put_strategy_event(self)
 
-    def send_email(self, msg) -> None:
-        """
-        Send email to default receiver.
-        """
+    def send_email(self, msg: str) -> None:
+        """发送邮件信息"""
         if self.inited:
             self.strategy_engine.send_email(msg, self)
 
     def sync_data(self):
-        """
-        Sync strategy variables value into disk storage.
-        """
+        """同步策略状态数据到文件"""
         if self.trading:
             self.strategy_engine.sync_strategy_data(self)
