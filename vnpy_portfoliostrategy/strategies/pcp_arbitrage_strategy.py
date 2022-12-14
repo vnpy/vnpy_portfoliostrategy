@@ -1,13 +1,15 @@
 from typing import List, Dict
 from datetime import datetime
 
-from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 from vnpy.trader.utility import BarGenerator, extract_vt_symbol
 from vnpy.trader.object import TickData, BarData
+from vnpy.trader.constant import Direction
+
+from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 
 
 class PcpArbitrageStrategy(StrategyTemplate):
-    """"""
+    """期权平价套利策略"""
 
     author = "用Python的交易员"
 
@@ -50,20 +52,20 @@ class PcpArbitrageStrategy(StrategyTemplate):
         strategy_name: str,
         vt_symbols: List[str],
         setting: dict
-    ):
-        """"""
+    ) -> None:
+        """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
         self.bgs: Dict[str, BarGenerator] = {}
         self.last_tick_time: datetime = None
 
-        # Obtain contract info
+        # 绑定合约代码
         for vt_symbol in self.vt_symbols:
-            symbol, exchange = extract_vt_symbol(vt_symbol)
+            symbol, _ = extract_vt_symbol(vt_symbol)
 
             if "C" in symbol:
                 self.call_symbol = vt_symbol
-                _, strike_str = symbol.split("-C-")     # For CFFEX/DCE options
+                _, strike_str = symbol.split("-C-")     # CFFEX/DCE
                 self.strike_price = int(strike_str)
             elif "P" in symbol:
                 self.put_symbol = vt_symbol
@@ -76,30 +78,22 @@ class PcpArbitrageStrategy(StrategyTemplate):
 
             self.bgs[vt_symbol] = BarGenerator(on_bar)
 
-    def on_init(self):
-        """
-        Callback when strategy is inited.
-        """
+    def on_init(self) -> None:
+        """策略初始化回调"""
         self.write_log("策略初始化")
 
         self.load_bars(1)
 
-    def on_start(self):
-        """
-        Callback when strategy is started.
-        """
+    def on_start(self) -> None:
+        """策略启动回调"""
         self.write_log("策略启动")
 
-    def on_stop(self):
-        """
-        Callback when strategy is stopped.
-        """
+    def on_stop(self) -> None:
+        """策略停止回调"""
         self.write_log("策略停止")
 
     def on_tick(self, tick: TickData):
-        """
-        Callback of new tick data update.
-        """
+        """行情推送回调"""
         if (
             self.last_tick_time
             and self.last_tick_time.minute != tick.datetime.minute
@@ -114,75 +108,61 @@ class PcpArbitrageStrategy(StrategyTemplate):
 
         self.last_tick_time = tick.datetime
 
-    def on_bars(self, bars: Dict[str, BarData]):
-        """"""
+    def on_bars(self, bars: Dict[str, BarData]) -> None:
+        """K线切片回调"""
         self.cancel_all()
 
-        # Calcualate spread data
+        # 计算PCP价差
         call_bar = bars[self.call_symbol]
         put_bar = bars[self.put_symbol]
         futures_bar = bars[self.futures_symbol]
 
         self.futures_price = futures_bar.close_price
-        self.synthetic_price = (
-            call_bar.close_price - put_bar.close_price + self.strike_price
-        )
+        self.synthetic_price = call_bar.close_price - put_bar.close_price + self.strike_price
         self.current_spread = self.synthetic_price - self.futures_price
 
-        # Get current position
+        # 计算目标仓位
+        futures_target: int = self.get_target(self.futures_symbol)
+
+        if not futures_target:
+            if self.current_spread > self.entry_level:
+                self.set_target(self.call_symbol, -self.fixed_size)
+                self.set_target(self.put_symbol, self.fixed_size)
+                self.set_target(self.futures_symbol, self.fixed_size)
+            elif self.current_spread < -self.entry_level:
+                self.set_target(self.call_symbol, self.fixed_size)
+                self.set_target(self.put_symbol, -self.fixed_size)
+                self.set_target(self.futures_symbol, -self.fixed_size)
+        elif futures_target > 0:
+            if self.current_spread <= 0:
+                self.set_target(self.call_symbol, 0)
+                self.set_target(self.put_symbol, 0)
+                self.set_target(self.futures_symbol, 0)
+        else:
+            if self.current_spread >= 0:
+                self.set_target(self.call_symbol, 0)
+                self.set_target(self.put_symbol, 0)
+                self.set_target(self.futures_symbol, 0)
+
+        # 执行调仓交易
+        self.execute_target_orders()
+
+        # 更新策略状态
         self.call_pos = self.get_pos(self.call_symbol)
         self.put_pos = self.get_pos(self.put_symbol)
         self.futures_pos = self.get_pos(self.futures_symbol)
 
-        # Calculate target position
-        if not self.futures_pos:
-            if self.current_spread > self.entry_level:
-                self.call_target = -self.fixed_size
-                self.put_target = self.fixed_size
-                self.futures_target = self.fixed_size
-            elif self.current_spread < -self.entry_level:
-                self.call_target = self.fixed_size
-                self.put_target = -self.fixed_size
-                self.futures_target = -self.fixed_size
-        elif self.futures_pos > 0:
-            if self.current_spread <= 0:
-                self.call_target = 0
-                self.put_target = 0
-                self.futures_target = 0
-        else:
-            if self.current_spread >= 0:
-                self.call_target = 0
-                self.put_target = 0
-                self.futures_target = 0
-
-        # Execute orders
-        target = {
-            self.call_symbol: self.call_target,
-            self.put_symbol: self.put_target,
-            self.futures_symbol: self.futures_target
-        }
-
-        for vt_symbol in self.vt_symbols:
-            target_pos = target[vt_symbol]
-            current_pos = self.get_pos(vt_symbol)
-
-            pos_diff = target_pos - current_pos
-            volume = abs(pos_diff)
-            bar = bars[vt_symbol]
-
-            if pos_diff > 0:
-                price = bar.close_price + self.price_add
-
-                if current_pos < 0:
-                    self.cover(vt_symbol, price, volume)
-                else:
-                    self.buy(vt_symbol, price, volume)
-            elif pos_diff < 0:
-                price = bar.close_price - self.price_add
-
-                if current_pos > 0:
-                    self.sell(vt_symbol, price, volume)
-                else:
-                    self.short(vt_symbol, price, volume)
+        self.call_target = self.get_target(self.call_symbol)
+        self.put_target = self.get_target(self.put_symbol)
+        self.futures_target = self.get_target(self.futures_symbol)
 
         self.put_event()
+
+    def calculate_target_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+        """计算目标交易的委托价格"""
+        if direction == Direction.LONG:
+            price: float = reference + self.price_add
+        else:
+            price: float = reference - self.price_add
+
+        return price
