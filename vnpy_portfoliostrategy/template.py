@@ -228,7 +228,7 @@ class StrategyTemplate(ABC):
                 if buy_volume:
                     self.buy(vt_symbol, order_price, buy_volume)
             # 空头
-            elif diff > 0:
+            elif diff < 0:
                 # 计算空头委托价
                 order_price: float = self.calculate_target_price(
                     vt_symbol,
@@ -242,7 +242,7 @@ class StrategyTemplate(ABC):
 
                 if pos > 0:
                     sell_volume = min(abs(diff), pos)
-                    short_volume = abs(diff) - cover_volume
+                    short_volume = abs(diff) - sell_volume
                 else:
                     short_volume = abs(diff)
 
