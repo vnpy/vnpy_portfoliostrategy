@@ -199,7 +199,7 @@ class StrategyTemplate(ABC):
         for vt_symbol, bar in bars.items():
             # 计算仓差
             target: int = self.get_target(vt_symbol)
-            pos: int = self.get_target(vt_symbol)
+            pos: int = self.get_pos(vt_symbol)
             diff: int = target - pos
 
             # 多头
