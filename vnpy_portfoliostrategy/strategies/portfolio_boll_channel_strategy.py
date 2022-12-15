@@ -127,13 +127,13 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                     self.set_target(vt_symbol, 0)
 
         # 执行调仓交易
-        self.execute_target_orders(bars)
+        self.rebalance_portfolio(bars)
 
         # 推送界面更新
         self.put_event()
 
-    def calculate_target_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
-        """计算目标交易的委托价格"""
+    def calculate_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+        """计算调仓委托价格（支持按需重载实现）"""
         if direction == Direction.LONG:
             price: float = reference + self.price_add
         else:

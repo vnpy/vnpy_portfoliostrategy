@@ -47,6 +47,7 @@ class StrategyTemplate(ABC):
         self.variables.insert(0, "inited")
         self.variables.insert(1, "trading")
         self.variables.insert(2, "pos_data")
+        self.variables.insert(3, "target_data")
 
         # 设置策略参数
         self.update_setting(setting)
@@ -191,8 +192,8 @@ class StrategyTemplate(ABC):
         """设置目标仓位"""
         self.target_data[vt_symbol] = target
 
-    def execute_target_orders(self, bars: Dict[str, BarData]) -> None:
-        """执行目标调仓交易"""
+    def rebalance_portfolio(self, bars: Dict[str, BarData]) -> None:
+        """基于目标执行调仓交易"""
         self.cancel_all()
 
         # 只发出当前K线切片有行情的合约的委托
@@ -203,9 +204,9 @@ class StrategyTemplate(ABC):
             diff: int = target - pos
 
             # 多头
-            if diff > 0:
+            if diff > 0: 
                 # 计算多头委托价
-                order_price: float = self.calculate_target_price(
+                order_price: float = self.calculate_price(
                     vt_symbol,
                     Direction.LONG,
                     bar.close_price
@@ -230,7 +231,7 @@ class StrategyTemplate(ABC):
             # 空头
             elif diff < 0:
                 # 计算空头委托价
-                order_price: float = self.calculate_target_price(
+                order_price: float = self.calculate_price(
                     vt_symbol,
                     Direction.SHORT,
                     bar.close_price
@@ -254,13 +255,13 @@ class StrategyTemplate(ABC):
                     self.short(vt_symbol, order_price, short_volume)
 
     @virtual
-    def calculate_target_price(
+    def calculate_price(
         self,
         vt_symbol: str,
         direction: Direction,
         reference: float
     ) -> float:
-        """计算调仓委托价格（根据需求重载实现）"""
+        """计算调仓委托价格（支持按需重载实现）"""
         return reference
 
     def get_order(self, vt_orderid: str) -> Optional[OrderData]:

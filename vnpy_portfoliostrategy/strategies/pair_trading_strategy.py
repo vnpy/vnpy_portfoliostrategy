@@ -15,7 +15,7 @@ class PairTradingStrategy(StrategyTemplate):
 
     author = "用Python的交易员"
 
-    price_add = 5
+    tick_add = 1
     boll_window = 20
     boll_dev = 2
     fixed_size = 1
@@ -30,7 +30,7 @@ class PairTradingStrategy(StrategyTemplate):
     boll_up = 0.0
 
     parameters = [
-        "price_add",
+        "tick_add",
         "boll_window",
         "boll_dev",
         "fixed_size",
@@ -155,16 +155,18 @@ class PairTradingStrategy(StrategyTemplate):
                 self.set_target(self.leg2_symbol, 0)
 
         # 执行调仓交易
-        self.execute_target_orders(bars)
+        self.rebalance_portfolio(bars)
 
         # 推送更新事件
         self.put_event()
 
-    def calculate_target_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
-        """计算目标交易的委托价格"""
+    def calculate_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+        """计算调仓委托价格（支持按需重载实现）"""
+        pricetick: float = self.get_pricetick(vt_symbol)
+
         if direction == Direction.LONG:
-            price: float = reference + self.price_add
+            price: float = reference + self.tick_add * pricetick
         else:
-            price: float = reference - self.price_add
+            price: float = reference - self.tick_add * pricetick
 
         return price
