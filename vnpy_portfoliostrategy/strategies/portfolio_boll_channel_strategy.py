@@ -3,12 +3,14 @@ from datetime import datetime
 
 from vnpy.trader.utility import ArrayManager, Interval
 from vnpy.trader.object import TickData, BarData
+from vnpy.trader.constant import Direction
+
 from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 
 
 class PortfolioBollChannelStrategy(StrategyTemplate):
-    """"""
+    """组合布林带通道策略"""
 
     author = "用Python的交易员"
 
@@ -37,8 +39,8 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         strategy_name: str,
         vt_symbols: List[str],
         setting: dict
-    ):
-        """"""
+    ) -> None:
+        """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
         self.boll_up: Dict[str, float] = {}
@@ -48,57 +50,45 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         self.intra_trade_high: Dict[str, float] = {}
         self.intra_trade_low: Dict[str, float] = {}
 
-        self.targets: Dict[str, int] = {}
         self.last_tick_time: datetime = None
 
         # Obtain contract info
         self.ams: Dict[str, ArrayManager] = {}
         for vt_symbol in self.vt_symbols:
             self.ams[vt_symbol] = ArrayManager()
-            self.targets[vt_symbol] = 0
 
         self.pbg = PortfolioBarGenerator(self.on_bars, 2, self.on_2hour_bars, Interval.HOUR)
 
-    def on_init(self):
-        """
-        Callback when strategy is inited.
-        """
+    def on_init(self) -> None:
+        """策略初始化回调"""
         self.write_log("策略初始化")
 
         self.load_bars(10)
 
-    def on_start(self):
-        """
-        Callback when strategy is started.
-        """
+    def on_start(self) -> None:
+        """策略启动回调"""
         self.write_log("策略启动")
 
-    def on_stop(self):
-        """
-        Callback when strategy is stopped.
-        """
+    def on_stop(self) -> None:
+        """策略停止回调"""
         self.write_log("策略停止")
 
-    def on_tick(self, tick: TickData):
-        """
-        Callback of new tick data update.
-        """
+    def on_tick(self, tick: TickData) -> None:
+        """行情推送回调"""
         self.pbg.update_tick(tick)
 
-    def on_bars(self, bars: Dict[str, BarData]):
-        """
-        Callback of new bars data update.
-        """
+    def on_bars(self, bars: Dict[str, BarData]) -> None:
+        """K线切片回调"""
         self.pbg.update_bars(bars)
 
-    def on_2hour_bars(self, bars: Dict[str, BarData]):
-        """"""
-        self.cancel_all()
-
+    def on_2hour_bars(self, bars: Dict[str, BarData]) -> None:
+        """2小时K线回调"""
+        # 更新到缓存序列
         for vt_symbol, bar in bars.items():
             am: ArrayManager = self.ams[vt_symbol]
             am.update_bar(bar)
 
+        # 计算目标仓位
         for vt_symbol, bar in bars.items():
             am: ArrayManager = self.ams[vt_symbol]
             if not am.inited:
@@ -114,9 +104,9 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 self.intra_trade_low[vt_symbol] = bar.low_price
 
                 if self.cci_value[vt_symbol] > 0:
-                    self.targets[vt_symbol] = self.fixed_size
+                    self.set_target(vt_symbol, self.fixed_size)
                 elif self.cci_value[vt_symbol] < 0:
-                    self.targets[vt_symbol] = -self.fixed_size
+                    self.set_target(vt_symbol, -self.fixed_size)
 
             elif current_pos > 0:
                 self.intra_trade_high[vt_symbol] = max(self.intra_trade_high[vt_symbol], bar.high_price)
@@ -125,7 +115,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 long_stop = self.intra_trade_high[vt_symbol] - self.atr_value[vt_symbol] * self.sl_multiplier
 
                 if bar.close_price <= long_stop:
-                    self.targets[vt_symbol] = 0
+                    self.set_target(vt_symbol, 0)
 
             elif current_pos < 0:
                 self.intra_trade_low[vt_symbol] = min(self.intra_trade_low[vt_symbol], bar.low_price)
@@ -134,31 +124,19 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 short_stop = self.intra_trade_low[vt_symbol] + self.atr_value[vt_symbol] * self.sl_multiplier
 
                 if bar.close_price >= short_stop:
-                    self.targets[vt_symbol] = 0
+                    self.set_target(vt_symbol, 0)
 
-        for vt_symbol in self.vt_symbols:
-            target_pos = self.targets[vt_symbol]
-            current_pos = self.get_pos(vt_symbol)
+        # 执行调仓交易
+        self.rebalance_portfolio(bars)
 
-            pos_diff = target_pos - current_pos
-            volume = abs(pos_diff)
-            bar = bars[vt_symbol]
-            boll_up = self.boll_up[vt_symbol]
-            boll_down = self.boll_down[vt_symbol]
-
-            if pos_diff > 0:
-                price = bar.close_price + self.price_add
-
-                if current_pos < 0:
-                    self.cover(vt_symbol, price, volume)
-                else:
-                    self.buy(vt_symbol, boll_up, volume)
-            elif pos_diff < 0:
-                price = bar.close_price - self.price_add
-
-                if current_pos > 0:
-                    self.sell(vt_symbol, price, volume)
-                else:
-                    self.short(vt_symbol, boll_down, volume)
-
+        # 推送界面更新
         self.put_event()
+
+    def calculate_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+        """计算调仓委托价格（支持按需重载实现）"""
+        if direction == Direction.LONG:
+            price: float = reference + self.price_add
+        else:
+            price: float = reference - self.price_add
+
+        return price
