@@ -136,16 +136,16 @@ class PairTradingStrategy(StrategyTemplate):
         self.boll_down = self.boll_mid - self.boll_dev * std
 
         # 计算目标持仓
-        leg1_target = self.get_target(self.leg1_symbol)
+        leg1_pos = self.get_pos(self.leg1_symbol)
 
-        if not leg1_target:
+        if not leg1_pos:
             if self.current_spread >= self.boll_up:
                 self.set_target(self.leg1_symbol, -self.fixed_size)
                 self.set_target(self.leg2_symbol, self.fixed_size)
             elif self.current_spread <= self.boll_down:
                 self.set_target(self.leg1_symbol, self.fixed_size)
                 self.set_target(self.leg2_symbol, -self.fixed_size)
-        elif leg1_target > 0:
+        elif leg1_pos > 0:
             if self.current_spread >= self.boll_mid:
                 self.set_target(self.leg1_symbol, 0)
                 self.set_target(self.leg2_symbol, 0)
