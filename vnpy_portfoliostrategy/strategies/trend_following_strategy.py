@@ -133,11 +133,11 @@ class TrendFollowingStrategy(StrategyTemplate):
                 if bar.close_price >= short_stop:
                     self.set_target(vt_symbol, 0)
 
-        self.execute_target_orders(bars)
+        self.rebalance_portfolio(bars)
 
         self.put_event()
 
-    def calculate_target_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+    def calculate_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
         """计算目标交易的委托价格"""
         if direction == Direction.LONG:
             price: float = reference + self.price_add

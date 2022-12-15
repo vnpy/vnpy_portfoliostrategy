@@ -155,12 +155,12 @@ class PairTradingStrategy(StrategyTemplate):
                 self.set_target(self.leg2_symbol, 0)
 
         # 执行调仓交易
-        self.execute_target_orders(bars)
+        self.rebalance_portfolio(bars)
 
         # 推送更新事件
         self.put_event()
 
-    def calculate_target_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+    def calculate_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
         """计算目标交易的委托价格"""
         if direction == Direction.LONG:
             price: float = reference + self.price_add
