@@ -104,13 +104,13 @@ class PairTradingStrategy(StrategyTemplate):
 
     def on_bars(self, bars: Dict[str, BarData]) -> None:
         """K线切片回调"""
-        # 必须两条期权腿行情都存在
-        if self.leg1_symbol not in bars or self.leg2_symbol not in bars:
-            return
-
         # 获取期权腿K线
-        leg1_bar = bars[self.leg1_symbol]
-        leg2_bar = bars[self.leg2_symbol]
+        leg1_bar = bars.get(self.leg1_symbol, None)
+        leg2_bar = bars.get(self.leg2_symbol, None)
+
+        # 必须两条期权腿行情都存在
+        if not leg1_bar or not leg2_bar:
+            return
 
         # 每5分钟运行一次
         if (leg1_bar.datetime.minute + 1) % 5:
@@ -136,16 +136,16 @@ class PairTradingStrategy(StrategyTemplate):
         self.boll_down = self.boll_mid - self.boll_dev * std
 
         # 计算目标持仓
-        leg1_target = self.get_target(self.leg1_symbol)
+        leg1_pos = self.get_pos(self.leg1_symbol)
 
-        if not leg1_target:
+        if not leg1_pos:
             if self.current_spread >= self.boll_up:
                 self.set_target(self.leg1_symbol, -self.fixed_size)
                 self.set_target(self.leg2_symbol, self.fixed_size)
             elif self.current_spread <= self.boll_down:
                 self.set_target(self.leg1_symbol, self.fixed_size)
                 self.set_target(self.leg2_symbol, -self.fixed_size)
-        elif leg1_target > 0:
+        elif leg1_pos > 0:
             if self.current_spread >= self.boll_mid:
                 self.set_target(self.leg1_symbol, 0)
                 self.set_target(self.leg2_symbol, 0)
