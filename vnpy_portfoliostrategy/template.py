@@ -204,7 +204,7 @@ class StrategyTemplate(ABC):
             diff: int = target - pos
 
             # 多头
-            if diff > 0: 
+            if diff > 0:
                 # 计算多头委托价
                 order_price: float = self.calculate_price(
                     vt_symbol,
