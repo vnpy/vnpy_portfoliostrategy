@@ -138,7 +138,7 @@ class TrendFollowingStrategy(StrategyTemplate):
         self.put_event()
 
     def calculate_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
-        """计算目标交易的委托价格"""
+        """计算调仓委托价格（支持按需重载实现）"""
         if direction == Direction.LONG:
             price: float = reference + self.price_add
         else:
