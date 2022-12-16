@@ -3,17 +3,19 @@ from datetime import datetime
 
 import numpy as np
 
-from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 from vnpy.trader.utility import BarGenerator
 from vnpy.trader.object import TickData, BarData
+from vnpy.trader.constant import Direction
+
+from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 
 
 class PairTradingStrategy(StrategyTemplate):
-    """"""
+    """配对交易策略"""
 
     author = "用Python的交易员"
 
-    price_add = 5
+    tick_add = 1
     boll_window = 20
     boll_dev = 2
     fixed_size = 1
@@ -28,7 +30,7 @@ class PairTradingStrategy(StrategyTemplate):
     boll_up = 0.0
 
     parameters = [
-        "price_add",
+        "tick_add",
         "boll_window",
         "boll_dev",
         "fixed_size",
@@ -50,12 +52,11 @@ class PairTradingStrategy(StrategyTemplate):
         strategy_name: str,
         vt_symbols: List[str],
         setting: dict
-    ):
-        """"""
+    ) -> None:
+        """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
         self.bgs: Dict[str, BarGenerator] = {}
-        self.targets: Dict[str, int] = {}
         self.last_tick_time: datetime = None
 
         self.spread_count: int = 0
@@ -69,33 +70,24 @@ class PairTradingStrategy(StrategyTemplate):
             pass
 
         for vt_symbol in self.vt_symbols:
-            self.targets[vt_symbol] = 0
             self.bgs[vt_symbol] = BarGenerator(on_bar)
 
-    def on_init(self):
-        """
-        Callback when strategy is inited.
-        """
+    def on_init(self) -> None:
+        """策略初始化回调"""
         self.write_log("策略初始化")
 
         self.load_bars(1)
 
-    def on_start(self):
-        """
-        Callback when strategy is started.
-        """
+    def on_start(self) -> None:
+        """策略启动回调"""
         self.write_log("策略启动")
 
-    def on_stop(self):
-        """
-        Callback when strategy is stopped.
-        """
+    def on_stop(self) -> None:
+        """策略停止回调"""
         self.write_log("策略停止")
 
-    def on_tick(self, tick: TickData):
-        """
-        Callback of new tick data update.
-        """
+    def on_tick(self, tick: TickData) -> None:
+        """行情推送回调"""
         if (
             self.last_tick_time
             and self.last_tick_time.minute != tick.datetime.minute
@@ -110,27 +102,24 @@ class PairTradingStrategy(StrategyTemplate):
 
         self.last_tick_time = tick.datetime
 
-    def on_bars(self, bars: Dict[str, BarData]):
-        """"""
-        self.cancel_all()
+    def on_bars(self, bars: Dict[str, BarData]) -> None:
+        """K线切片回调"""
+        # 获取期权腿K线
+        leg1_bar = bars.get(self.leg1_symbol, None)
+        leg2_bar = bars.get(self.leg2_symbol, None)
 
-        # Return if one leg data is missing
-        if self.leg1_symbol not in bars or self.leg2_symbol not in bars:
+        # 必须两条期权腿行情都存在
+        if not leg1_bar or not leg2_bar:
             return
 
-        # Calculate current spread
-        leg1_bar = bars[self.leg1_symbol]
-        leg2_bar = bars[self.leg2_symbol]
-
-        # Filter time only run every 5 minutes
+        # 每5分钟运行一次
         if (leg1_bar.datetime.minute + 1) % 5:
             return
 
-        self.current_spread = (
-            leg1_bar.close_price * self.leg1_ratio - leg2_bar.close_price * self.leg2_ratio
-        )
+        # 计算当前价差
+        self.current_spread = leg1_bar.close_price * self.leg1_ratio - leg2_bar.close_price * self.leg2_ratio
 
-        # Update to spread array
+        # 更新到价差序列
         self.spread_data[:-1] = self.spread_data[1:]
         self.spread_data[-1] = self.current_spread
 
@@ -138,7 +127,7 @@ class PairTradingStrategy(StrategyTemplate):
         if self.spread_count <= self.boll_window:
             return
 
-        # Calculate boll value
+        # 计算布林带
         buf: np.array = self.spread_data[-self.boll_window:]
 
         std = buf.std()
@@ -146,47 +135,38 @@ class PairTradingStrategy(StrategyTemplate):
         self.boll_up = self.boll_mid + self.boll_dev * std
         self.boll_down = self.boll_mid - self.boll_dev * std
 
-        # Calculate new target position
+        # 计算目标持仓
         leg1_pos = self.get_pos(self.leg1_symbol)
 
         if not leg1_pos:
             if self.current_spread >= self.boll_up:
-                self.targets[self.leg1_symbol] = - self.fixed_size
-                self.targets[self.leg2_symbol] = self.fixed_size
+                self.set_target(self.leg1_symbol, -self.fixed_size)
+                self.set_target(self.leg2_symbol, self.fixed_size)
             elif self.current_spread <= self.boll_down:
-                self.targets[self.leg1_symbol] = self.fixed_size
-                self.targets[self.leg2_symbol] = - self.fixed_size
+                self.set_target(self.leg1_symbol, self.fixed_size)
+                self.set_target(self.leg2_symbol, -self.fixed_size)
         elif leg1_pos > 0:
             if self.current_spread >= self.boll_mid:
-                self.targets[self.leg1_symbol] = 0
-                self.targets[self.leg2_symbol] = 0
+                self.set_target(self.leg1_symbol, 0)
+                self.set_target(self.leg2_symbol, 0)
         else:
             if self.current_spread <= self.boll_mid:
-                self.targets[self.leg1_symbol] = 0
-                self.targets[self.leg2_symbol] = 0
+                self.set_target(self.leg1_symbol, 0)
+                self.set_target(self.leg2_symbol, 0)
 
-        # Execute orders
-        for vt_symbol in self.vt_symbols:
-            target_pos = self.targets[vt_symbol]
-            current_pos = self.get_pos(vt_symbol)
+        # 执行调仓交易
+        self.rebalance_portfolio(bars)
 
-            pos_diff = target_pos - current_pos
-            volume = abs(pos_diff)
-            bar = bars[vt_symbol]
-
-            if pos_diff > 0:
-                price = bar.close_price + self.price_add
-
-                if current_pos < 0:
-                    self.cover(vt_symbol, price, volume)
-                else:
-                    self.buy(vt_symbol, price, volume)
-            elif pos_diff < 0:
-                price = bar.close_price - self.price_add
-
-                if current_pos > 0:
-                    self.sell(vt_symbol, price, volume)
-                else:
-                    self.short(vt_symbol, price, volume)
-
+        # 推送更新事件
         self.put_event()
+
+    def calculate_price(self, vt_symbol: str, direction: Direction, reference: float) -> float:
+        """计算调仓委托价格（支持按需重载实现）"""
+        pricetick: float = self.get_pricetick(vt_symbol)
+
+        if direction == Direction.LONG:
+            price: float = reference + self.tick_add * pricetick
+        else:
+            price: float = reference - self.tick_add * pricetick
+
+        return price
