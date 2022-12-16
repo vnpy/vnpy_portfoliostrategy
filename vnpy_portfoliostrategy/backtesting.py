@@ -532,9 +532,9 @@ class BacktestingEngine:
         daily_result: Optional[PortfolioDailyResult] = self.daily_results.get(d, None)
 
         if daily_result:
-            daily_result.update_close_prices(d, close_prices)
+            daily_result.update_close_prices(close_prices)
         else:
-            self.daily_results[d] = PortfolioDailyResult(close_prices)
+            self.daily_results[d] = PortfolioDailyResult(d, close_prices)
 
     def new_bars(self, dt: datetime) -> None:
         """"""
