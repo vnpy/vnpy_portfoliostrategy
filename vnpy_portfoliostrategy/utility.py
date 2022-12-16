@@ -14,7 +14,7 @@ class PortfolioBarGenerator:
         on_window_bars: Callable = None,
         interval: Interval = Interval.MINUTE
     ) -> None:
-        """Constructor"""
+        """构造函数"""
         self.on_bars: Callable = on_bars
 
         self.interval: Interval = interval
@@ -33,7 +33,7 @@ class PortfolioBarGenerator:
         self.last_dt: datetime = None
 
     def update_tick(self, tick: TickData) -> None:
-        """"""
+        """更新行情切片数据"""
         if not tick.last_price:
             return
 
@@ -75,20 +75,18 @@ class PortfolioBarGenerator:
         self.last_dt = tick.datetime
 
     def update_bars(self, bars: Dict[str, BarData]) -> None:
-        """
-        Update 1 minute bars into generator
-        """
+        """更新一分钟K线"""
         if self.interval == Interval.MINUTE:
             self.update_bar_minute_window(bars)
         else:
             self.update_bar_hour_window(bars)
 
     def update_bar_minute_window(self, bars: Dict[str, BarData]) -> None:
-        """"""
+        """更新N分钟K线"""
         for vt_symbol, bar in bars.items():
             window_bar: Optional[BarData] = self.window_bars.get(vt_symbol, None)
 
-            # If not inited, create window bar object
+            # 如果没有N分钟K线则创建
             if not window_bar:
                 dt: datetime = bar.datetime.replace(second=0, microsecond=0)
                 window_bar = BarData(
@@ -102,7 +100,7 @@ class PortfolioBarGenerator:
                 )
                 self.window_bars[vt_symbol] = window_bar
 
-            # Otherwise, update high/low price into window bar
+            # 更新K线内最高价及最低价
             else:
                 window_bar.high_price = max(
                     window_bar.high_price,
@@ -113,23 +111,23 @@ class PortfolioBarGenerator:
                     bar.low_price
                 )
 
-            # Update close price/volume/turnover into window bar
+            # 更新K线内收盘价、数量、成交额、持仓量
             window_bar.close_price = bar.close_price
             window_bar.volume += bar.volume
             window_bar.turnover += bar.turnover
             window_bar.open_interest = bar.open_interest
 
-        # Check if window bar completed
+        # 检查K线是否合成完毕
         if not (bar.datetime.minute + 1) % self.window:
             self.on_window_bars(self.window_bars)
             self.window_bars = {}
 
     def update_bar_hour_window(self, bars: Dict[str, BarData]) -> None:
-        """"""
+        """更新小时K线"""
         for vt_symbol, bar in bars.items():
             hour_bar: Optional[BarData] = self.hour_bars.get(vt_symbol, None)
 
-            # If not inited, create window bar object
+            # 如果没有小时K线则创建
             if not hour_bar:
                 dt: datetime = bar.datetime.replace(minute=0, second=0, microsecond=0)
                 hour_bar = BarData(
@@ -148,7 +146,7 @@ class PortfolioBarGenerator:
                 self.hour_bars[vt_symbol] = hour_bar
 
             else:
-                # If minute is 59, update minute bar into window bar and push
+                # 如果收到59分的分钟K线，更新小时K线并推送
                 if bar.datetime.minute == 59:
                     hour_bar.high_price = max(
                         hour_bar.high_price,
@@ -167,7 +165,7 @@ class PortfolioBarGenerator:
                     self.finished_hour_bars[vt_symbol] = hour_bar
                     self.hour_bars[vt_symbol] = None
 
-                # If minute bar of new hour, then push existing window bar
+                # 如果收到新的小时的分钟K线，直接推送当前的小时K线
                 elif bar.datetime.hour != hour_bar.datetime.hour:
                     self.finished_hour_bars[vt_symbol] = hour_bar
 
@@ -187,7 +185,7 @@ class PortfolioBarGenerator:
                     )
                     self.hour_bars[vt_symbol] = hour_bar
 
-                # Otherwise only update minute bar
+                # 否则直接更新小时K线
                 else:
                     hour_bar.high_price = max(
                         hour_bar.high_price,
@@ -203,13 +201,13 @@ class PortfolioBarGenerator:
                     hour_bar.turnover += bar.turnover
                     hour_bar.open_interest = bar.open_interest
 
-        # Push finished window bar
+        # 推送合成完毕的小时K线
         if self.finished_hour_bars:
             self.on_hour_bars(self.finished_hour_bars)
             self.finished_hour_bars = {}
 
     def on_hour_bars(self, bars: Dict[str, BarData]) -> None:
-        """"""
+        """推送小时K线"""
         if self.window == 1:
             self.on_window_bars(bars)
         else:

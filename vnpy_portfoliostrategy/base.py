@@ -1,7 +1,3 @@
-"""
-Defines constants and objects used in PortfolioStrategy App.
-"""
-
 from enum import Enum
 
 
