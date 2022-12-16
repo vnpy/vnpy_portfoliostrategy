@@ -32,12 +32,12 @@ INTERVAL_DELTA_MAP: Dict[Interval, timedelta] = {
 
 
 class BacktestingEngine:
-    """"""
+    """组合策略回测引擎"""
 
     gateway_name: str = "BACKTESTING"
 
     def __init__(self):
-        """"""
+        """构造函数"""
         self.vt_symbols: List[str] = []
         self.start: datetime = None
         self.end: datetime = None
@@ -73,9 +73,7 @@ class BacktestingEngine:
         self.daily_df: DataFrame = None
 
     def clear_data(self) -> None:
-        """
-        Clear all data of last backtesting.
-        """
+        """清理上次回测缓存数据"""
         self.strategy = None
         self.bars = {}
         self.datetime = None
@@ -104,7 +102,7 @@ class BacktestingEngine:
         end: datetime = None,
         risk_free: float = 0
     ) -> None:
-        """"""
+        """设置参数"""
         self.vt_symbols = vt_symbols
         self.interval = interval
 
@@ -119,14 +117,14 @@ class BacktestingEngine:
         self.risk_free = risk_free
 
     def add_strategy(self, strategy_class: type, setting: dict) -> None:
-        """"""
+        """增加策略"""
         self.strategy_class = strategy_class
         self.strategy = strategy_class(
             self, strategy_class.__name__, copy(self.vt_symbols), setting
         )
 
     def load_data(self) -> None:
-        """"""
+        """加载历史数据"""
         self.output("开始加载历史数据")
 
         if not self.end:
@@ -136,11 +134,11 @@ class BacktestingEngine:
             self.output("起始日期必须小于结束日期")
             return
 
-        # Clear previously loaded history data
+        # 清理上次加载的历史数据
         self.history_data.clear()
         self.dts.clear()
 
-        # Load 30 days of data each time and allow for progress update
+        # 每次加载30天历史数据
         progress_delta: timedelta = timedelta(days=30)
         total_delta: timedelta = self.end - self.start
         interval_delta: timedelta = INTERVAL_DELTA_MAP[self.interval]
@@ -152,7 +150,7 @@ class BacktestingEngine:
 
             data_count = 0
             while start < self.end:
-                end = min(end, self.end)  # Make sure end time stays within set range
+                end = min(end, self.end)
 
                 data: List[BarData] = load_bar_data(
                     vt_symbol,
@@ -179,14 +177,13 @@ class BacktestingEngine:
         self.output("所有历史数据加载完成")
 
     def run_backtesting(self) -> None:
-        """"""
+        """开始回测"""
         self.strategy.on_init()
 
-        # Generate sorted datetime list
         dts: list = list(self.dts)
         dts.sort()
 
-        # Use the first [days] of history data for initializing strategy
+        # 使用指定时间的历史数据初始化策略
         day_count: int = 0
         ix: int = 0
 
@@ -210,7 +207,7 @@ class BacktestingEngine:
         self.strategy.trading = True
         self.output("开始回放历史数据")
 
-        # Use the rest of history data for running backtesting
+        # 使用剩余历史数据进行策略回测
         for dt in dts[ix:]:
             try:
                 self.new_bars(dt)
@@ -222,20 +219,18 @@ class BacktestingEngine:
         self.output("历史数据回放结束")
 
     def calculate_result(self) -> DataFrame:
-        """"""
+        """计算逐日盯市盈亏"""
         self.output("开始计算逐日盯市盈亏")
 
         if not self.trades:
             self.output("成交记录为空，无法计算")
             return
 
-        # Add trade data into daily reuslt.
         for trade in self.trades.values():
             d: date = trade.datetime.date()
             daily_result: PortfolioDailyResult = self.daily_results[d]
             daily_result.add_trade(trade)
 
-        # Calculate daily result by iteration.
         pre_closes: dict = {}
         start_poses: dict = {}
 
@@ -251,7 +246,6 @@ class BacktestingEngine:
             pre_closes = daily_result.close_prices
             start_poses = daily_result.end_poses
 
-        # Generate dataframe
         results: dict = defaultdict(list)
 
         for daily_result in self.daily_results.values():
@@ -270,16 +264,14 @@ class BacktestingEngine:
         return self.daily_df
 
     def calculate_statistics(self, df: DataFrame = None, output=True) -> dict:
-        """"""
+        """计算策略统计指标"""
         self.output("开始计算策略统计指标")
 
-        # Check DataFrame input exterior
         if df is None:
             df: DataFrame = self.daily_df
 
-        # Check for init DataFrame
         if df is None:
-            # Set all statistics to 0 if no trade.
+            # 如果没有成交记录则设置所有指标结果为0
             start_date: str = ""
             end_date: str = ""
             total_days: int = 0
@@ -306,7 +298,7 @@ class BacktestingEngine:
             sharpe_ratio: float = 0
             return_drawdown_ratio: float = 0
         else:
-            # Calculate balance related time series data
+            # 计算资金相关指标
             df["balance"] = df["net_pnl"].cumsum() + self.capital
             df["return"] = np.log(df["balance"] / df["balance"].shift(1)).fillna(0)
             df["highlevel"] = (
@@ -316,7 +308,7 @@ class BacktestingEngine:
             df["drawdown"] = df["balance"] - df["highlevel"]
             df["ddpercent"] = df["drawdown"] / df["highlevel"] * 100
 
-            # Calculate statistics value
+            # 计算统计指标
             start_date = df.index[0]
             end_date = df.index[-1]
 
@@ -363,7 +355,7 @@ class BacktestingEngine:
 
             return_drawdown_ratio: float = -total_net_pnl / max_drawdown
 
-        # Output
+        # 输出结果
         if output:
             self.output("-" * 30)
             self.output(f"首个交易日：\t{start_date}")
@@ -428,7 +420,7 @@ class BacktestingEngine:
             "return_drawdown_ratio": return_drawdown_ratio,
         }
 
-        # Filter potential error infinite value
+        # 过滤极值
         for key, value in statistics.items():
             if value in (np.inf, -np.inf):
                 value = 0
@@ -438,12 +430,10 @@ class BacktestingEngine:
         return statistics
 
     def show_chart(self, df: DataFrame = None) -> None:
-        """"""
-        # Check DataFrame input exterior
+        """显示图表"""
         if df is None:
             df: DataFrame = self.daily_df
 
-        # Check for init DataFrame
         if df is None:
             return
 
@@ -480,7 +470,7 @@ class BacktestingEngine:
         fig.show()
 
     def run_bf_optimization(self, optimization_setting: OptimizationSetting, output=True):
-        """"""
+        """暴力穷举优化"""
         if not check_optimization_setting(optimization_setting):
             return
 
@@ -502,7 +492,7 @@ class BacktestingEngine:
     run_optimization = run_bf_optimization
 
     def run_ga_optimization(self, optimization_setting: OptimizationSetting, output=True):
-        """"""
+        """遗传算法优化"""
         if not check_optimization_setting(optimization_setting):
             return
 
@@ -522,7 +512,7 @@ class BacktestingEngine:
         return results
 
     def update_daily_close(self, bars: Dict[str, BarData], dt: datetime) -> None:
-        """"""
+        """更新每日收盘价"""
         d: date = dt.date()
 
         close_prices: dict = {}
@@ -537,21 +527,20 @@ class BacktestingEngine:
             self.daily_results[d] = PortfolioDailyResult(close_prices)
 
     def new_bars(self, dt: datetime) -> None:
-        """"""
+        """历史数据推送"""
         self.datetime = dt
 
         bars: Dict[str, BarData] = {}
         for vt_symbol in self.vt_symbols:
             bar: Optional[BarData] = self.history_data.get((dt, vt_symbol), None)
 
-            # If bar data of vt_symbol at dt exists
+            # 判断是否获取到该合约指定时间的历史数据
             if bar:
-                # Update bar data for crossing order
+                # 更新K线以供委托撮合
                 self.bars[vt_symbol] = bar
-
-                # Put bar into dict for strategy.on_bars update
+                # 缓存K线数据以供strategy.on_bars更新
                 bars[vt_symbol] = bar
-            # Otherwise, use previous close to backfill
+            # 如果获取不到，但self.bars字典中已有合约数据缓存, 使用之前的数据填充
             elif vt_symbol in self.bars:
                 old_bar: BarData = self.bars[vt_symbol]
 
@@ -574,9 +563,7 @@ class BacktestingEngine:
             self.update_daily_close(self.bars, dt)
 
     def cross_limit_order(self) -> None:
-        """
-        Cross limit order with last bar/tick data.
-        """
+        """撮合限价委托"""
         for order in list(self.active_limit_orders.values()):
             bar: BarData = self.bars[order.vt_symbol]
 
@@ -585,12 +572,12 @@ class BacktestingEngine:
             long_best_price: float = bar.open_price
             short_best_price: float = bar.open_price
 
-            # Push order update with status "not traded" (pending).
+            # 推送委托未成交状态更新
             if order.status == Status.SUBMITTING:
                 order.status = Status.NOTTRADED
                 self.strategy.update_order(order)
 
-            # Check whether limit orders can be filled.
+            # 检查可以被撮合的限价委托
             long_cross: bool = (
                 order.direction == Direction.LONG
                 and order.price >= long_cross_price
@@ -606,7 +593,7 @@ class BacktestingEngine:
             if not long_cross and not short_cross:
                 continue
 
-            # Push order update with status "all traded" (filled).
+            # 推送委托成交状态更新
             order.traded = order.volume
             order.status = Status.ALLTRADED
             self.strategy.update_order(order)
@@ -614,7 +601,7 @@ class BacktestingEngine:
             if order.vt_orderid in self.active_limit_orders:
                 self.active_limit_orders.pop(order.vt_orderid)
 
-            # Push trade update
+            # 推送成交信息
             self.trade_count += 1
 
             if long_cross:
@@ -644,7 +631,7 @@ class BacktestingEngine:
         days: int,
         interval: Interval
     ) -> None:
-        """"""
+        """加载历史数据"""
         self.days = days
 
     def send_order(
@@ -658,7 +645,7 @@ class BacktestingEngine:
         lock: bool,
         net: bool
     ) -> List[str]:
-        """"""
+        """发送委托"""
         price: float = round_to(price, self.priceticks[vt_symbol])
         symbol, exchange = extract_vt_symbol(vt_symbol)
 
@@ -683,9 +670,7 @@ class BacktestingEngine:
         return [order.vt_orderid]
 
     def cancel_order(self, strategy: StrategyTemplate, vt_orderid: str) -> None:
-        """
-        Cancel order by vt_orderid.
-        """
+        """委托撤单"""
         if vt_orderid not in self.active_limit_orders:
             return
         order: OrderData = self.active_limit_orders.pop(vt_orderid)
@@ -694,66 +679,48 @@ class BacktestingEngine:
         self.strategy.update_order(order)
 
     def write_log(self, msg: str, strategy: StrategyTemplate = None) -> None:
-        """
-        Write log message.
-        """
+        """输出日志"""
         msg: str = f"{self.datetime}\t{msg}"
         self.logs.append(msg)
 
     def send_email(self, msg: str, strategy: StrategyTemplate = None) -> None:
-        """
-        Send email to default receiver.
-        """
+        """发送邮件"""
         pass
 
     def sync_strategy_data(self, strategy: StrategyTemplate) -> None:
-        """
-        Sync strategy data into json file.
-        """
+        """保存策略数据到文件"""
         pass
 
     def get_pricetick(self, strategy: StrategyTemplate, vt_symbol) -> float:
-        """
-        Return contract pricetick data.
-        """
+        """获取合约乘数"""
         return self.priceticks[vt_symbol]
 
     def put_strategy_event(self, strategy: StrategyTemplate) -> None:
-        """
-        Put an event to update strategy status.
-        """
+        """推送事件更新策略界面"""
         pass
 
     def output(self, msg) -> None:
-        """
-        Output message of backtesting engine.
-        """
+        """输出回测引擎信息"""
         print(f"{datetime.now()}\t{msg}")
 
     def get_all_trades(self) -> List[TradeData]:
-        """
-        Return all trade data of current backtesting result.
-        """
+        """获取所有成交信息"""
         return list(self.trades.values())
 
     def get_all_orders(self) -> List[OrderData]:
-        """
-        Return all limit order data of current backtesting result.
-        """
+        """获取所有委托信息"""
         return list(self.limit_orders.values())
 
     def get_all_daily_results(self) -> List["PortfolioDailyResult"]:
-        """
-        Return all daily result data.
-        """
+        """获取所有每日盈亏信息"""
         return list(self.daily_results.values())
 
 
 class ContractDailyResult:
-    """"""
+    """合约每日盈亏结果"""
 
     def __init__(self, result_date: date, close_price: float) -> None:
-        """"""
+        """构造函数"""
         self.date: date = result_date
         self.close_price: float = close_price
         self.pre_close: float = 0
@@ -774,7 +741,7 @@ class ContractDailyResult:
         self.net_pnl: float = 0
 
     def add_trade(self, trade: TradeData) -> None:
-        """"""
+        """添加成交信息"""
         self.trades.append(trade)
 
     def calculate_pnl(
@@ -785,21 +752,20 @@ class ContractDailyResult:
         rate: float,
         slippage: float
     ) -> None:
-        """"""
-        # If no pre_close provided on the first day,
-        # use value 1 to avoid zero division error
+        """计算盈亏"""
+        # 如果没有昨收盘价，用1代替。避免除法运算报错
         if pre_close:
             self.pre_close = pre_close
         else:
             self.pre_close = 1
 
-        # Holding pnl is the pnl from holding position at day start
+        # 计算持仓盈亏
         self.start_pos = start_pos
         self.end_pos = start_pos
 
         self.holding_pnl = self.start_pos * (self.close_price - self.pre_close) * size
 
-        # Trading pnl is the pnl from new trade during the day
+        # 计算交易盈亏
         self.trade_count = len(self.trades)
 
         for trade in self.trades:
@@ -817,17 +783,17 @@ class ContractDailyResult:
             self.turnover += turnover
             self.commission += turnover * rate
 
-        # Net pnl takes account of commission and slippage cost
+        # 计算每日盈亏
         self.total_pnl = self.trading_pnl + self.holding_pnl
         self.net_pnl = self.total_pnl - self.commission - self.slippage
 
     def update_close_price(self, close_price: float) -> None:
-        """"""
+        """更新每日收盘价"""
         self.close_price = close_price
 
 
 class PortfolioDailyResult:
-    """"""
+    """组合每日盈亏结果"""
 
     def __init__(self, result_date: date, close_prices: Dict[str, float]) -> None:
         """"""
@@ -852,7 +818,7 @@ class PortfolioDailyResult:
         self.net_pnl: float = 0
 
     def add_trade(self, trade: TradeData) -> None:
-        """"""
+        """添加成交信息"""
         contract_result: ContractDailyResult = self.contract_results[trade.vt_symbol]
         contract_result.add_trade(trade)
 
@@ -864,7 +830,7 @@ class PortfolioDailyResult:
         rates: Dict[str, float],
         slippages: Dict[str, float],
     ) -> None:
-        """"""
+        """计算盈亏"""
         self.pre_closes = pre_closes
 
         for vt_symbol, contract_result in self.contract_results.items():
@@ -888,7 +854,7 @@ class PortfolioDailyResult:
             self.end_poses[vt_symbol] = contract_result.end_pos
 
     def update_close_prices(self, close_prices: Dict[str, float]) -> None:
-        """"""
+        """更新每日收盘价"""
         self.close_prices = close_prices
 
         for vt_symbol, close_price in close_prices.items():
@@ -906,7 +872,7 @@ def load_bar_data(
     start: datetime,
     end: datetime
 ) -> List[BarData]:
-    """"""
+    """通过数据库获取历史数据"""
     symbol, exchange = extract_vt_symbol(vt_symbol)
 
     database: BaseDatabase = get_database()
@@ -930,9 +896,7 @@ def evaluate(
     end: datetime,
     setting: dict
 ) -> tuple:
-    """
-    Function for running in multiprocessing.pool
-    """
+    """包装回测相关函数以供进程池内运行"""
     engine: BacktestingEngine = BacktestingEngine()
 
     engine.set_parameters(
@@ -958,9 +922,7 @@ def evaluate(
 
 
 def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> callable:
-    """
-    Wrap evaluate function with given setting from backtesting engine.
-    """
+    """包装回测配置函数以供进程池内运行"""
     func: callable = partial(
         evaluate,
         target_name,
@@ -979,7 +941,5 @@ def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> callable:
 
 
 def get_target_value(result: list) -> float:
-    """
-    Get target value for sorting optimization results.
-    """
+    """获取优化目标"""
     return result[1]
