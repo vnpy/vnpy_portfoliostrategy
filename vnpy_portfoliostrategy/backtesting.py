@@ -534,7 +534,7 @@ class BacktestingEngine:
         if daily_result:
             daily_result.update_close_prices(d, close_prices)
         else:
-            self.daily_results[d] = PortfolioDailyResult(d, close_prices)
+            self.daily_results[d] = PortfolioDailyResult(close_prices)
 
     def new_bars(self, dt: datetime) -> None:
         """"""
@@ -887,7 +887,7 @@ class PortfolioDailyResult:
 
             self.end_poses[vt_symbol] = contract_result.end_pos
 
-    def update_close_prices(self, d: date, close_prices: Dict[str, float]) -> None:
+    def update_close_prices(self, close_prices: Dict[str, float]) -> None:
         """"""
         self.close_prices = close_prices
 
@@ -896,7 +896,7 @@ class PortfolioDailyResult:
             if contract_result:
                 contract_result.update_close_price(close_price)
             else:
-                self.contract_results[vt_symbol] = ContractDailyResult(d, close_price)
+                self.contract_results[vt_symbol] = ContractDailyResult(self.date, close_price)
 
 
 @lru_cache(maxsize=999)
