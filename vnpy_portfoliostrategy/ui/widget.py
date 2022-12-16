@@ -17,13 +17,13 @@ from ..engine import StrategyEngine
 
 
 class PortfolioStrategyManager(QtWidgets.QWidget):
-    """"""
+    """组合策略界面"""
 
     signal_log: QtCore.Signal = QtCore.Signal(Event)
     signal_strategy: QtCore.Signal = QtCore.Signal(Event)
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        """"""
+        """构造函数"""
         super().__init__()
 
         self.main_engine: MainEngine = main_engine
@@ -38,7 +38,7 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
         self.update_class_combo()
 
     def init_ui(self) -> None:
-        """"""
+        """初始化界面"""
         self.setWindowTitle("组合策略")
 
         # Create widgets
@@ -71,7 +71,6 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
 
         self.log_monitor: LogMonitor = LogMonitor(self.main_engine, self.event_engine)
 
-        # Set layout
         hbox1: QtWidgets.QHBoxLayout = QtWidgets.QHBoxLayout()
         hbox1.addWidget(self.class_combo)
         hbox1.addWidget(add_button)
@@ -92,13 +91,13 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
         self.setLayout(vbox)
 
     def update_class_combo(self) -> None:
-        """"""
+        """更新策略类名显示控件"""
         self.class_combo.addItems(
             self.strategy_engine.get_all_strategy_class_names()
         )
 
     def register_event(self) -> None:
-        """"""
+        """注册事件引擎"""
         self.signal_strategy.connect(self.process_strategy_event)
 
         self.event_engine.register(
@@ -106,9 +105,7 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
         )
 
     def process_strategy_event(self, event: Event) -> None:
-        """
-        Update strategy status onto its monitor.
-        """
+        """策略事件推送"""
         data: dict = event.data
         strategy_name: str = data["strategy_name"]
 
@@ -121,12 +118,12 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
             self.managers[strategy_name] = manager
 
     def remove_strategy(self, strategy_name: str) -> None:
-        """"""
+        """移除策略"""
         manager: StrategyManager = self.managers.pop(strategy_name)
         manager.deleteLater()
 
     def add_strategy(self) -> None:
-        """"""
+        """添加策略"""
         class_name: str = str(self.class_combo.currentText())
         if not class_name:
             return
@@ -145,18 +142,16 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
             )
 
     def clear_log(self) -> None:
-        """"""
+        """清除日志"""
         self.log_monitor.setRowCount(0)
 
     def show(self) -> None:
-        """"""
+        """最大化显示"""
         self.showMaximized()
 
 
 class StrategyManager(QtWidgets.QFrame):
-    """
-    Manager for a strategy
-    """
+    """策略控制控件"""
 
     def __init__(
         self,
@@ -164,7 +159,7 @@ class StrategyManager(QtWidgets.QFrame):
         strategy_engine: StrategyEngine,
         data: dict
     ) -> None:
-        """"""
+        """构造函数"""
         super().__init__()
 
         self.strategy_manager: PortfolioStrategyManager = strategy_manager
@@ -176,7 +171,7 @@ class StrategyManager(QtWidgets.QFrame):
         self.init_ui()
 
     def init_ui(self) -> None:
-        """"""
+        """初始化界面"""
         self.setFixedHeight(300)
         self.setFrameShape(self.Box)
         self.setLineWidth(1)
@@ -226,13 +221,13 @@ class StrategyManager(QtWidgets.QFrame):
         self.setLayout(vbox)
 
     def update_data(self, data: dict) -> None:
-        """"""
+        """更新策略数据"""
         self._data: dict = data
 
         self.parameters_monitor.update_data(data["parameters"])
         self.variables_monitor.update_data(data["variables"])
 
-        # Update button status
+        # 更新按钮状态
         variables: dict = data["variables"]
         inited: bool = variables["inited"]
         trading: bool = variables["trading"]
@@ -253,19 +248,19 @@ class StrategyManager(QtWidgets.QFrame):
             self.remove_button.setEnabled(True)
 
     def init_strategy(self) -> None:
-        """"""
+        """初始化策略"""
         self.strategy_engine.init_strategy(self.strategy_name)
 
     def start_strategy(self) -> None:
-        """"""
+        """启动策略"""
         self.strategy_engine.start_strategy(self.strategy_name)
 
     def stop_strategy(self) -> None:
-        """"""
+        """停止策略"""
         self.strategy_engine.stop_strategy(self.strategy_name)
 
     def edit_strategy(self) -> None:
-        """"""
+        """编辑策略"""
         strategy_name: str = self._data["strategy_name"]
 
         parameters: dict = self.strategy_engine.get_strategy_parameters(strategy_name)
@@ -277,21 +272,19 @@ class StrategyManager(QtWidgets.QFrame):
             self.strategy_engine.edit_strategy(strategy_name, setting)
 
     def remove_strategy(self) -> None:
-        """"""
+        """移除策略"""
         result: bool = self.strategy_engine.remove_strategy(self.strategy_name)
 
-        # Only remove strategy gui manager if it has been removed from engine
+        # 只移除在策略引擎被成功移除的策略
         if result:
             self.strategy_manager.remove_strategy(self.strategy_name)
 
 
 class DataMonitor(QtWidgets.QTableWidget):
-    """
-    Table monitor for parameters and variables.
-    """
+    """策略监控组件"""
 
     def __init__(self, data: dict) -> None:
-        """"""
+        """构造函数"""
         super(DataMonitor, self).__init__()
 
         self._data: dict = data
@@ -300,7 +293,7 @@ class DataMonitor(QtWidgets.QTableWidget):
         self.init_ui()
 
     def init_ui(self) -> None:
-        """"""
+        """初始化界面"""
         labels: list = list(self._data.keys())
         self.setColumnCount(len(labels))
         self.setHorizontalHeaderLabels(labels)
@@ -322,16 +315,14 @@ class DataMonitor(QtWidgets.QTableWidget):
             self.cells[name] = cell
 
     def update_data(self, data: dict):
-        """"""
+        """更新数据"""
         for name, value in data.items():
             cell: QtWidgets.QTableWidgetItem = self.cells[name]
             cell.setText(str(value))
 
 
 class LogMonitor(BaseMonitor):
-    """
-    Monitor for log data.
-    """
+    """日志监控组件"""
 
     event_type: str = EVENT_PORTFOLIO_LOG
     data_key: str = ""
@@ -343,9 +334,7 @@ class LogMonitor(BaseMonitor):
     }
 
     def init_ui(self) -> None:
-        """
-        Stretch last column.
-        """
+        """初始化界面"""
         super(LogMonitor, self).init_ui()
 
         self.horizontalHeader().setSectionResizeMode(
@@ -353,22 +342,18 @@ class LogMonitor(BaseMonitor):
         )
 
     def insert_new_row(self, data) -> None:
-        """
-        Insert a new row at the top of table.
-        """
+        """插入新行"""
         super().insert_new_row(data)
         self.resizeRowToContents(0)
 
 
 class SettingEditor(QtWidgets.QDialog):
-    """
-    For creating new strategy and editing strategy parameters.
-    """
+    """配置编辑框"""
 
     def __init__(
         self, parameters: dict, strategy_name: str = "", class_name: str = ""
     ) -> None:
-        """"""
+        """构造函数"""
         super(SettingEditor, self).__init__()
 
         self.parameters: dict = parameters
@@ -380,10 +365,9 @@ class SettingEditor(QtWidgets.QDialog):
         self.init_ui()
 
     def init_ui(self) -> None:
-        """"""
+        """初始化界面"""
         form: QtWidgets.QFormLayout = QtWidgets.QFormLayout()
 
-        # Add vt_symbols and name edit if add new strategy
         if self.class_name:
             self.setWindowTitle(f"添加策略：{self.class_name}")
             button_text: str = "添加"
@@ -416,7 +400,7 @@ class SettingEditor(QtWidgets.QDialog):
         self.setLayout(form)
 
     def get_setting(self) -> dict:
-        """"""
+        """获取策略配置"""
         setting: dict = {}
 
         if self.class_name:

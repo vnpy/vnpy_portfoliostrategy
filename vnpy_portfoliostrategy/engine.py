@@ -50,7 +50,7 @@ from .template import StrategyTemplate
 
 
 class StrategyEngine(BaseEngine):
-    """"""
+    """组合策略引擎"""
 
     setting_filename: str = "portfolio_strategy_setting.json"
     data_filename: str = "portfolio_strategy_data.json"
@@ -73,11 +73,12 @@ class StrategyEngine(BaseEngine):
 
         self.offset_converter: OffsetConverter = OffsetConverter(self.main_engine)
 
+        # 数据库和数据服务
         self.database: BaseDatabase = get_database()
         self.datafeed: BaseDatafeed = get_datafeed()
 
     def init_engine(self) -> None:
-        """"""
+        """初始化引擎"""
         self.init_datafeed()
         self.load_strategy_class()
         self.load_strategy_setting()
@@ -86,20 +87,18 @@ class StrategyEngine(BaseEngine):
         self.write_log("组合策略引擎初始化成功")
 
     def close(self) -> None:
-        """"""
+        """关闭"""
         self.stop_all_strategies()
 
     def register_event(self) -> None:
-        """"""
+        """注册事件引擎"""
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
         self.event_engine.register(EVENT_POSITION, self.process_position_event)
 
     def init_datafeed(self) -> None:
-        """
-        Init datafeed client.
-        """
+        """初始化数据服务"""
         result: bool = self.datafeed.init()
         if result:
             self.write_log("数据服务初始化成功")
@@ -107,9 +106,7 @@ class StrategyEngine(BaseEngine):
     def query_bar_from_datafeed(
         self, symbol: str, exchange: Exchange, interval: Interval, start: datetime, end: datetime
     ) -> List[BarData]:
-        """
-        Query bar data from datafeed.
-        """
+        """通过数据服务获取历史数据"""
         req: HistoryRequest = HistoryRequest(
             symbol=symbol,
             exchange=exchange,
@@ -121,7 +118,7 @@ class StrategyEngine(BaseEngine):
         return data
 
     def process_tick_event(self, event: Event) -> None:
-        """"""
+        """行情数据推送"""
         tick: TickData = event.data
 
         strategies: list = self.symbol_strategy_map[tick.vt_symbol]
@@ -133,7 +130,7 @@ class StrategyEngine(BaseEngine):
                 self.call_strategy_func(strategy, strategy.on_tick, tick)
 
     def process_order_event(self, event: Event) -> None:
-        """"""
+        """委托数据推送"""
         order: OrderData = event.data
 
         self.offset_converter.update_order(order)
@@ -145,14 +142,15 @@ class StrategyEngine(BaseEngine):
         self.call_strategy_func(strategy, strategy.update_order, order)
 
     def process_trade_event(self, event: Event) -> None:
-        """"""
+        """成交数据推送"""
         trade: TradeData = event.data
 
-        # Filter duplicate trade push
+        # 过滤重复的成交推送
         if trade.vt_tradeid in self.vt_tradeids:
             return
         self.vt_tradeids.add(trade.vt_tradeid)
 
+        # 更新到开平转换器
         self.offset_converter.update_trade(trade)
 
         strategy: Optional[StrategyTemplate] = self.orderid_strategy_map.get(trade.vt_orderid, None)
@@ -162,9 +160,8 @@ class StrategyEngine(BaseEngine):
         self.call_strategy_func(strategy, strategy.update_trade, trade)
 
     def process_position_event(self, event: Event) -> None:
-        """"""
+        """持仓数据推送"""
         position: PositionData = event.data
-
         self.offset_converter.update_position(position)
 
     def send_order(
@@ -178,19 +175,15 @@ class StrategyEngine(BaseEngine):
         lock: bool,
         net: bool,
     ) -> list:
-        """
-        Send a new order to server.
-        """
+        """发送委托"""
         contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
         if not contract:
             self.write_log(f"委托失败，找不到合约：{vt_symbol}", strategy)
             return ""
 
-        # Round order price and volume to nearest incremental value
         price: float = round_to(price, contract.pricetick)
         volume: float = round_to(volume, contract.min_volume)
 
-        # Create request and send order.
         original_req: OrderRequest = OrderRequest(
             symbol=contract.symbol,
             exchange=contract.exchange,
@@ -202,17 +195,14 @@ class StrategyEngine(BaseEngine):
             reference=f"{APP_NAME}_{strategy.strategy_name}"
         )
 
-        # Convert with offset converter
         req_list: List[OrderRequest] = self.offset_converter.convert_order_request(original_req, lock, net)
 
-        # Send Orders
         vt_orderids: list = []
 
         for req in req_list:
             vt_orderid: str = self.main_engine.send_order(
                 req, contract.gateway_name)
 
-            # Check if sending order successful
             if not vt_orderid:
                 continue
 
@@ -220,13 +210,12 @@ class StrategyEngine(BaseEngine):
 
             self.offset_converter.update_order_request(req, vt_orderid)
 
-            # Save relationship between orderid and strategy.
             self.orderid_strategy_map[vt_orderid] = strategy
 
         return vt_orderids
 
     def cancel_order(self, strategy: StrategyTemplate, vt_orderid: str) -> None:
-        """"""
+        """委托撤单"""
         order: Optional[OrderData] = self.main_engine.get_order(vt_orderid)
         if not order:
             self.write_log(f"撤单失败，找不到委托{vt_orderid}", strategy)
@@ -236,9 +225,7 @@ class StrategyEngine(BaseEngine):
         self.main_engine.cancel_order(req, order.gateway_name)
 
     def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
-        """
-        Return contract pricetick data.
-        """
+        """获取合约乘数"""
         contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
 
         if contract:
@@ -247,12 +234,12 @@ class StrategyEngine(BaseEngine):
             return None
 
     def load_bars(self, strategy: StrategyTemplate, days: int, interval: Interval) -> None:
-        """"""
+        """加载历史数据"""
         vt_symbols: list = strategy.vt_symbols
         dts: Set[datetime] = set()
         history_data: Dict[Tuple, BarData] = {}
 
-        # Load data from rqdata/gateway/database
+        # 通过接口、数据服务、数据库获取历史数据
         for vt_symbol in vt_symbols:
             data: List[BarData] = self.load_bar(vt_symbol, days, interval)
 
@@ -260,7 +247,6 @@ class StrategyEngine(BaseEngine):
                 dts.add(bar.datetime)
                 history_data[(bar.datetime, vt_symbol)] = bar
 
-        # Convert data structure and push to strategy
         dts: list = list(dts)
         dts.sort()
 
@@ -270,10 +256,10 @@ class StrategyEngine(BaseEngine):
             for vt_symbol in vt_symbols:
                 bar: Optional[BarData] = history_data.get((dt, vt_symbol), None)
 
-                # If bar data of vt_symbol at dt exists
+                # 如果获取到合约指定时间的历史数据，缓存进bars字典
                 if bar:
                     bars[vt_symbol] = bar
-                # Otherwise, use previous data to backfill
+                # 如果获取不到，但bars字典中已有合约数据缓存, 使用之前的数据填充
                 elif vt_symbol in bars:
                     old_bar: BarData = bars[vt_symbol]
 
@@ -292,14 +278,14 @@ class StrategyEngine(BaseEngine):
             self.call_strategy_func(strategy, strategy.on_bars, bars)
 
     def load_bar(self, vt_symbol: str, days: int, interval: Interval) -> List[BarData]:
-        """"""
+        """加载单个合约历史数据"""
         symbol, exchange = extract_vt_symbol(vt_symbol)
         end: datetime = datetime.now(DB_TZ)
         start: datetime = end - timedelta(days)
         contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
         data: List[BarData]
 
-        # Query bars from gateway if available
+        # 通过接口获取历史数据
         if contract and contract.history_data:
             req: HistoryRequest = HistoryRequest(
                 symbol=symbol,
@@ -309,10 +295,12 @@ class StrategyEngine(BaseEngine):
                 end=end
             )
             data = self.main_engine.query_history(req, contract.gateway_name)
-        # Try to query bars from datafeed, if not found, load from database.
+
+        # 通过数据服务获取历史数据
         else:
             data = self.query_bar_from_datafeed(symbol, exchange, interval, start, end)
 
+        # 通过数据库获取数据
         if not data:
             data = self.database.load_bar_data(
                 symbol=symbol,
@@ -327,9 +315,7 @@ class StrategyEngine(BaseEngine):
     def call_strategy_func(
         self, strategy: StrategyTemplate, func: Callable, params: Any = None
     ) -> None:
-        """
-        Call function of a strategy and catch any exception raised.
-        """
+        """安全调用策略函数"""
         try:
             if params:
                 func(params)
@@ -345,9 +331,7 @@ class StrategyEngine(BaseEngine):
     def add_strategy(
         self, class_name: str, strategy_name: str, vt_symbols: list, setting: dict
     ) -> None:
-        """
-        Add a new strategy.
-        """
+        """添加策略实例"""
         if strategy_name in self.strategies:
             self.write_log(f"创建策略失败，存在重名{strategy_name}")
             return
@@ -360,7 +344,6 @@ class StrategyEngine(BaseEngine):
         strategy: StrategyTemplate = strategy_class(self, strategy_name, vt_symbols, setting)
         self.strategies[strategy_name] = strategy
 
-        # Add vt_symbol to strategy map.
         for vt_symbol in vt_symbols:
             strategies: list = self.symbol_strategy_map[vt_symbol]
             strategies.append(strategy)
@@ -369,15 +352,11 @@ class StrategyEngine(BaseEngine):
         self.put_strategy_event(strategy)
 
     def init_strategy(self, strategy_name: str) -> None:
-        """
-        Init a strategy.
-        """
+        """初始化策略"""
         self.init_executor.submit(self._init_strategy, strategy_name)
 
     def _init_strategy(self, strategy_name: str) -> None:
-        """
-        Init strategies in queue.
-        """
+        """初始化策略"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
 
         if strategy.inited:
@@ -386,10 +365,10 @@ class StrategyEngine(BaseEngine):
 
         self.write_log(f"{strategy_name}开始执行初始化")
 
-        # Call on_init function of strategy
+        # 调用策略on_init函数
         self.call_strategy_func(strategy, strategy.on_init)
 
-        # Restore strategy data(variables)
+        # 恢复策略状态
         data: Optional[dict] = self.strategy_data.get(strategy_name, None)
         if data:
             for name in strategy.variables:
@@ -400,7 +379,7 @@ class StrategyEngine(BaseEngine):
                 elif value is not None:
                     setattr(strategy, name, value)
 
-        # Subscribe market data
+        # 订阅行情
         for vt_symbol in strategy.vt_symbols:
             contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
             if contract:
@@ -410,15 +389,13 @@ class StrategyEngine(BaseEngine):
             else:
                 self.write_log(f"行情订阅失败，找不到合约{vt_symbol}", strategy)
 
-        # Put event to update init completed status.
+        # 推送策略事件通知初始化完成状态
         strategy.inited = True
         self.put_strategy_event(strategy)
         self.write_log(f"{strategy_name}初始化完成")
 
     def start_strategy(self, strategy_name: str) -> None:
-        """
-        Start a strategy.
-        """
+        """启动策略"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
         if not strategy.inited:
             self.write_log(f"策略{strategy.strategy_name}启动失败，请先初始化")
@@ -428,38 +405,36 @@ class StrategyEngine(BaseEngine):
             self.write_log(f"{strategy_name}已经启动，请勿重复操作")
             return
 
+        # 调用策略on_start函数
         self.call_strategy_func(strategy, strategy.on_start)
-        strategy.trading = True
 
+        # 推送策略事件通知启动完成状态
+        strategy.trading = True
         self.put_strategy_event(strategy)
 
     def stop_strategy(self, strategy_name: str) -> None:
-        """
-        Stop a strategy.
-        """
+        """停止策略"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
         if not strategy.trading:
             return
 
-        # Call on_stop function of the strategy
+        # 调用策略on_stop函数
         self.call_strategy_func(strategy, strategy.on_stop)
 
-        # Change trading status of strategy to False
+        # 将交易状态设为False
         strategy.trading = False
 
-        # Cancel all orders of the strategy
+        # 撤销全部委托
         strategy.cancel_all()
 
-        # Sync strategy variables to data file
+        # 同步数据状态
         self.sync_strategy_data(strategy)
 
-        # Update GUI
+        # 推送策略事件通知停止完成状态
         self.put_strategy_event(strategy)
 
     def edit_strategy(self, strategy_name: str, setting: dict) -> None:
-        """
-        Edit parameters of a strategy.
-        """
+        """编辑策略参数"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
         strategy.update_setting(setting)
 
@@ -467,34 +442,27 @@ class StrategyEngine(BaseEngine):
         self.put_strategy_event(strategy)
 
     def remove_strategy(self, strategy_name: str) -> bool:
-        """
-        Remove a strategy.
-        """
+        """移除策略实例"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
         if strategy.trading:
             self.write_log(f"策略{strategy.strategy_name}移除失败，请先停止")
             return
 
-        # Remove from symbol strategy map
         for vt_symbol in strategy.vt_symbols:
             strategies: list = self.symbol_strategy_map[vt_symbol]
             strategies.remove(strategy)
 
-        # Remove from vt_orderid strategy map
         for vt_orderid in strategy.active_orderids:
             if vt_orderid in self.orderid_strategy_map:
                 self.orderid_strategy_map.pop(vt_orderid)
 
-        # Remove from strategies
         self.strategies.pop(strategy_name)
         self.save_strategy_setting()
 
         return True
 
     def load_strategy_class(self) -> None:
-        """
-        Load strategy class from source code.
-        """
+        """加载策略类"""
         path1: Path = Path(__file__).parent.joinpath("strategies")
         self.load_strategy_class_from_folder(path1, "vnpy_portfoliostrategy.strategies")
 
@@ -502,9 +470,7 @@ class StrategyEngine(BaseEngine):
         self.load_strategy_class_from_folder(path2, "strategies")
 
     def load_strategy_class_from_folder(self, path: Path, module_name: str = "") -> None:
-        """
-        Load strategy class from certain folder.
-        """
+        """通过指定文件夹加载策略类"""
         for suffix in ["py", "pyd", "so"]:
             pathname: str = str(path.joinpath(f"*.{suffix}"))
             for filepath in glob.glob(pathname):
@@ -513,9 +479,7 @@ class StrategyEngine(BaseEngine):
                 self.load_strategy_class_from_module(strategy_module_name)
 
     def load_strategy_class_from_module(self, module_name: str) -> None:
-        """
-        Load strategy class from module file.
-        """
+        """通过策略文件加载策略类"""
         try:
             module: ModuleType = importlib.import_module(module_name)
 
@@ -528,32 +492,24 @@ class StrategyEngine(BaseEngine):
             self.write_log(msg)
 
     def load_strategy_data(self) -> None:
-        """
-        Load strategy data from json file.
-        """
+        """加载策略数据"""
         self.strategy_data = load_json(self.data_filename)
 
     def sync_strategy_data(self, strategy: StrategyTemplate) -> None:
-        """
-        Sync strategy data into json file.
-        """
+        """保存策略数据到文件"""
         data: dict = strategy.get_variables()
-        data.pop("inited")      # Strategy status (inited, trading) should not be synced.
+        data.pop("inited")      # 不保存策略状态信息
         data.pop("trading")
 
         self.strategy_data[strategy.strategy_name] = data
         save_json(self.data_filename, self.strategy_data)
 
     def get_all_strategy_class_names(self) -> list:
-        """
-        Return names of strategy classes loaded.
-        """
+        """获取所有加载策略类名"""
         return list(self.classes.keys())
 
     def get_strategy_class_parameters(self, class_name: str) -> dict:
-        """
-        Get default parameters of a strategy class.
-        """
+        """获取策略类参数"""
         strategy_class: StrategyTemplate = self.classes[class_name]
 
         parameters: dict = {}
@@ -563,31 +519,27 @@ class StrategyEngine(BaseEngine):
         return parameters
 
     def get_strategy_parameters(self, strategy_name) -> dict:
-        """
-        Get parameters of a strategy.
-        """
+        """获取策略参数"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
         return strategy.get_parameters()
 
     def init_all_strategies(self) -> None:
-        """"""
+        """初始化所有策略"""
         for strategy_name in self.strategies.keys():
             self.init_strategy(strategy_name)
 
     def start_all_strategies(self) -> None:
-        """"""
+        """启动所有策略"""
         for strategy_name in self.strategies.keys():
             self.start_strategy(strategy_name)
 
     def stop_all_strategies(self) -> None:
-        """"""
+        """停止所有策略"""
         for strategy_name in self.strategies.keys():
             self.stop_strategy(strategy_name)
 
     def load_strategy_setting(self) -> None:
-        """
-        Load setting file.
-        """
+        """加载策略配置"""
         strategy_setting: dict = load_json(self.setting_filename)
 
         for strategy_name, strategy_config in strategy_setting.items():
@@ -599,9 +551,7 @@ class StrategyEngine(BaseEngine):
             )
 
     def save_strategy_setting(self) -> None:
-        """
-        Save setting file.
-        """
+        """保存策略配置"""
         strategy_setting: dict = {}
 
         for name, strategy in self.strategies.items():
@@ -614,17 +564,13 @@ class StrategyEngine(BaseEngine):
         save_json(self.setting_filename, strategy_setting)
 
     def put_strategy_event(self, strategy: StrategyTemplate) -> None:
-        """
-        Put an event to update strategy status.
-        """
+        """推送事件更新策略界面"""
         data: dict = strategy.get_data()
         event: Event = Event(EVENT_PORTFOLIO_STRATEGY, data)
         self.event_engine.put(event)
 
     def write_log(self, msg: str, strategy: StrategyTemplate = None) -> None:
-        """
-        Create portfolio engine log event.
-        """
+        """输出日志"""
         if strategy:
             msg: str = f"{strategy.strategy_name}: {msg}"
 
@@ -633,9 +579,7 @@ class StrategyEngine(BaseEngine):
         self.event_engine.put(event)
 
     def send_email(self, msg: str, strategy: StrategyTemplate = None) -> None:
-        """
-        Send email to default receiver.
-        """
+        """发送邮件"""
         if strategy:
             subject: str = f"{strategy.strategy_name}"
         else:
