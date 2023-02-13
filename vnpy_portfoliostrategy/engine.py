@@ -19,15 +19,13 @@ from vnpy.trader.object import (
     TickData,
     OrderData,
     TradeData,
-    PositionData,
     BarData,
     ContractData
 )
 from vnpy.trader.event import (
     EVENT_TICK,
     EVENT_ORDER,
-    EVENT_TRADE,
-    EVENT_POSITION
+    EVENT_TRADE
 )
 from vnpy.trader.constant import (
     Direction,
@@ -38,7 +36,6 @@ from vnpy.trader.constant import (
 )
 from vnpy.trader.utility import load_json, save_json, extract_vt_symbol, round_to
 from vnpy.trader.datafeed import BaseDatafeed, get_datafeed
-from vnpy.trader.converter import OffsetConverter
 from vnpy.trader.database import BaseDatabase, get_database, DB_TZ
 
 from .base import (
@@ -71,8 +68,6 @@ class StrategyEngine(BaseEngine):
 
         self.vt_tradeids: Set[str] = set()
 
-        self.offset_converter: OffsetConverter = OffsetConverter(self.main_engine)
-
         # 数据库和数据服务
         self.database: BaseDatabase = get_database()
         self.datafeed: BaseDatafeed = get_datafeed()
@@ -95,7 +90,6 @@ class StrategyEngine(BaseEngine):
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
-        self.event_engine.register(EVENT_POSITION, self.process_position_event)
 
     def init_datafeed(self) -> None:
         """初始化数据服务"""
@@ -133,8 +127,6 @@ class StrategyEngine(BaseEngine):
         """委托数据推送"""
         order: OrderData = event.data
 
-        self.offset_converter.update_order(order)
-
         strategy: Optional[StrategyTemplate] = self.orderid_strategy_map.get(order.vt_orderid, None)
         if not strategy:
             return
@@ -150,19 +142,12 @@ class StrategyEngine(BaseEngine):
             return
         self.vt_tradeids.add(trade.vt_tradeid)
 
-        # 更新到开平转换器
-        self.offset_converter.update_trade(trade)
-
+        # 推送给策略
         strategy: Optional[StrategyTemplate] = self.orderid_strategy_map.get(trade.vt_orderid, None)
         if not strategy:
             return
 
         self.call_strategy_func(strategy, strategy.update_trade, trade)
-
-    def process_position_event(self, event: Event) -> None:
-        """持仓数据推送"""
-        position: PositionData = event.data
-        self.offset_converter.update_position(position)
 
     def send_order(
         self,
@@ -195,7 +180,12 @@ class StrategyEngine(BaseEngine):
             reference=f"{APP_NAME}_{strategy.strategy_name}"
         )
 
-        req_list: List[OrderRequest] = self.offset_converter.convert_order_request(original_req, lock, net)
+        req_list: List[OrderRequest] = self.main_engine.convert_order_request(
+            original_req,
+            contract.gateway_name,
+            lock,
+            net
+        )
 
         vt_orderids: list = []
 
@@ -208,7 +198,7 @@ class StrategyEngine(BaseEngine):
 
             vt_orderids.append(vt_orderid)
 
-            self.offset_converter.update_order_request(req, vt_orderid)
+            self.main_engine.update_order_request(req, vt_orderid, contract.gateway_name)
 
             self.orderid_strategy_map[vt_orderid] = strategy
 
