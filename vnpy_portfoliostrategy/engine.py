@@ -373,9 +373,11 @@ class StrategyEngine(BaseEngine):
         if data:
             for name in strategy.variables:
                 value: Optional[Any] = data.get(name, None)
-                if name == "pos":
-                    pos = getattr(strategy, name)
-                    pos.update(value)
+                # 对于持仓和目标数据字典，需要使用dict.update更新defaultdict
+                if name in {"pos_data", "target_data"}:
+                    data = getattr(strategy, name)
+                    data.update(value)
+                # 对于其他int/float/str/bool字段则可以直接赋值
                 elif value is not None:
                     setattr(strategy, name, value)
 
