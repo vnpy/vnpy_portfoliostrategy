@@ -99,7 +99,7 @@ class StrategyEngine(BaseEngine):
 
     def init_datafeed(self) -> None:
         """初始化数据服务"""
-        result: bool = self.datafeed.init()
+        result: bool = self.datafeed.init(self.write_log)
         if result:
             self.write_log("数据服务初始化成功")
 
