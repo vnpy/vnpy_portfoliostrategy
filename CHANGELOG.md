@@ -1,7 +1,8 @@
 # 1.0.4版本
 
 1. 修复pos_data/target_data从缓存文件恢复数据，导致defaultdict变成dict的问题
-2. 
+2. 改为使用OmsEngine提供的OffsetConverter组件
+
 
 # 1.0.3版本
 
