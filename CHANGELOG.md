@@ -2,6 +2,7 @@
 
 1. 修复pos_data/target_data从缓存文件恢复数据，导致defaultdict变成dict的问题
 2. 改为使用OmsEngine提供的OffsetConverter组件
+3. 增加查询历史数据时的日志输出
 
 
 # 1.0.3版本
