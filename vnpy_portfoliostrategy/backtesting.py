@@ -270,45 +270,51 @@ class BacktestingEngine:
         if df is None:
             df: DataFrame = self.daily_df
 
-        if df is None:
-            # 如果没有成交记录则设置所有指标结果为0
-            start_date: str = ""
-            end_date: str = ""
-            total_days: int = 0
-            profit_days: int = 0
-            loss_days: int = 0
-            end_balance: float = 0
-            max_drawdown: float = 0
-            max_ddpercent: float = 0
-            max_drawdown_duration: int = 0
-            total_net_pnl: float = 0
-            daily_net_pnl: float = 0
-            total_commission: float = 0
-            daily_commission: float = 0
-            total_slippage: float = 0
-            daily_slippage: float = 0
-            total_turnover: float = 0
-            daily_turnover: float = 0
-            total_trade_count: int = 0
-            daily_trade_count: int = 0
-            total_return: float = 0
-            annual_return: float = 0
-            daily_return: float = 0
-            return_std: float = 0
-            sharpe_ratio: float = 0
-            return_drawdown_ratio: float = 0
-        else:
-            # 计算资金相关指标
+        # 初始化统计指标
+        start_date: str = ""
+        end_date: str = ""
+        total_days: int = 0
+        profit_days: int = 0
+        loss_days: int = 0
+        end_balance: float = 0
+        max_drawdown: float = 0
+        max_ddpercent: float = 0
+        max_drawdown_duration: int = 0
+        total_net_pnl: float = 0
+        daily_net_pnl: float = 0
+        total_commission: float = 0
+        daily_commission: float = 0
+        total_slippage: float = 0
+        daily_slippage: float = 0
+        total_turnover: float = 0
+        daily_turnover: float = 0
+        total_trade_count: int = 0
+        daily_trade_count: int = 0
+        total_return: float = 0
+        annual_return: float = 0
+        daily_return: float = 0
+        return_std: float = 0
+        sharpe_ratio: float = 0
+        return_drawdown_ratio: float = 0
+
+        # 检查是否发生过爆仓
+        positive_balance: bool = False
+
+        # 计算资金相关指标
+        if df is not None:
             df["balance"] = df["net_pnl"].cumsum() + self.capital
             df["return"] = np.log(df["balance"] / df["balance"].shift(1)).fillna(0)
-            df["highlevel"] = (
-                df["balance"].rolling(
-                    min_periods=1, window=len(df), center=False).max()
-            )
+            df["highlevel"] = df["balance"].rolling(min_periods=1, window=len(df), center=False).max()
             df["drawdown"] = df["balance"] - df["highlevel"]
             df["ddpercent"] = df["drawdown"] / df["highlevel"] * 100
 
-            # 计算统计指标
+            # 检查是否发生过爆仓
+            positive_balance = (df["balance"] > 0).all()
+            if not positive_balance:
+                self.output("回测中出现爆仓（资金小于等于0），无法计算策略统计指标")
+
+        # 计算统计指标
+        if positive_balance:
             start_date = df.index[0]
             end_date = df.index[-1]
 
