@@ -276,9 +276,13 @@ class StrategyTemplate(ABC):
         """记录日志"""
         self.strategy_engine.write_log(msg, self)
 
-    def get_pricetick(self, vt_symbol) -> float:
+    def get_pricetick(self, vt_symbol: str) -> float:
         """查询合约最小价格跳动"""
         return self.strategy_engine.get_pricetick(self, vt_symbol)
+
+    def get_size(self, vt_symbol: str) -> int:
+        """查询合约乘数"""
+        return self.strategy_engine.get_size(self, vt_symbol)
 
     def load_bars(self, days: int, interval: Interval = Interval.MINUTE) -> None:
         """加载历史K线数据来执行初始化"""
@@ -294,7 +298,7 @@ class StrategyTemplate(ABC):
         if self.inited:
             self.strategy_engine.send_email(msg, self)
 
-    def sync_data(self):
+    def sync_data(self) -> None:
         """同步策略状态数据到文件"""
         if self.trading:
             self.strategy_engine.sync_strategy_data(self)

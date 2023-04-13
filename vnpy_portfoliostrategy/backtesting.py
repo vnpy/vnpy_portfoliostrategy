@@ -36,7 +36,7 @@ class BacktestingEngine:
 
     gateway_name: str = "BACKTESTING"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """构造函数"""
         self.vt_symbols: List[str] = []
         self.start: datetime = None
@@ -697,9 +697,13 @@ class BacktestingEngine:
         """保存策略数据到文件"""
         pass
 
-    def get_pricetick(self, strategy: StrategyTemplate, vt_symbol) -> float:
-        """获取合约乘数"""
+    def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
+        """获取合约价格跳动"""
         return self.priceticks[vt_symbol]
+
+    def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
+        """获取合约乘数"""
+        return self.sizes[vt_symbol]
 
     def put_strategy_event(self, strategy: StrategyTemplate) -> None:
         """推送事件更新策略界面"""

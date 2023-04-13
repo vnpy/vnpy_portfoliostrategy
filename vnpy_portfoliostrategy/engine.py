@@ -215,11 +215,20 @@ class StrategyEngine(BaseEngine):
         self.main_engine.cancel_order(req, order.gateway_name)
 
     def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
-        """获取合约乘数"""
+        """获取合约价格跳动"""
         contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
 
         if contract:
             return contract.pricetick
+        else:
+            return None
+
+    def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> int:
+        """获取合约乘数"""
+        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+
+        if contract:
+            return contract.size
         else:
             return None
 
