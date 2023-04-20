@@ -144,33 +144,47 @@ class BacktestingEngine:
         interval_delta: timedelta = INTERVAL_DELTA_MAP[self.interval]
 
         for vt_symbol in self.vt_symbols:
-            start: datetime = self.start
-            end: datetime = self.start + progress_delta
-            progress = 0
+            if self.interval == Interval.MINUTE:
+                start: datetime = self.start
+                end: datetime = self.start + progress_delta
+                progress = 0
 
-            data_count = 0
-            while start < self.end:
-                end = min(end, self.end)
+                data_count = 0
+                while start < self.end:
+                    end = min(end, self.end)
 
+                    data: List[BarData] = load_bar_data(
+                        vt_symbol,
+                        self.interval,
+                        start,
+                        end
+                    )
+
+                    for bar in data:
+                        self.dts.add(bar.datetime)
+                        self.history_data[(bar.datetime, vt_symbol)] = bar
+                        data_count += 1
+
+                    progress += progress_delta / total_delta
+                    progress = min(progress, 1)
+                    progress_bar = "#" * int(progress * 10)
+                    self.output(f"{vt_symbol}加载进度：{progress_bar} [{progress:.0%}]")
+
+                    start = end + interval_delta
+                    end += (progress_delta + interval_delta)
+            else:
                 data: List[BarData] = load_bar_data(
                     vt_symbol,
                     self.interval,
-                    start,
-                    end
+                    self.start,
+                    self.end
                 )
 
                 for bar in data:
                     self.dts.add(bar.datetime)
                     self.history_data[(bar.datetime, vt_symbol)] = bar
-                    data_count += 1
 
-                progress += progress_delta / total_delta
-                progress = min(progress, 1)
-                progress_bar = "#" * int(progress * 10)
-                self.output(f"{vt_symbol}加载进度：{progress_bar} [{progress:.0%}]")
-
-                start = end + interval_delta
-                end += (progress_delta + interval_delta)
+                data_count = len(data)
 
             self.output(f"{vt_symbol}历史数据加载完成，数据量：{data_count}")
 
