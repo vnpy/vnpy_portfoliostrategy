@@ -21,6 +21,7 @@ from vnpy.trader.optimize import (
     run_ga_optimization
 )
 
+from .base import EngineType
 from .template import StrategyTemplate
 
 
@@ -34,6 +35,7 @@ INTERVAL_DELTA_MAP: Dict[Interval, timedelta] = {
 class BacktestingEngine:
     """组合策略回测引擎"""
 
+    engine_type: EngineType = EngineType.BACKTESTING
     gateway_name: str = "BACKTESTING"
 
     def __init__(self) -> None:
@@ -710,6 +712,10 @@ class BacktestingEngine:
     def sync_strategy_data(self, strategy: StrategyTemplate) -> None:
         """保存策略数据到文件"""
         pass
+
+    def get_engine_type(self) -> EngineType:
+        """获取引擎类型"""
+        return self.engine_type
 
     def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
         """获取合约价格跳动"""

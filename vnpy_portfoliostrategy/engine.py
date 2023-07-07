@@ -41,13 +41,16 @@ from vnpy.trader.database import BaseDatabase, get_database, DB_TZ
 from .base import (
     APP_NAME,
     EVENT_PORTFOLIO_LOG,
-    EVENT_PORTFOLIO_STRATEGY
+    EVENT_PORTFOLIO_STRATEGY,
+    EngineType
 )
 from .template import StrategyTemplate
 
 
 class StrategyEngine(BaseEngine):
     """组合策略引擎"""
+
+    engine_type: EngineType = EngineType.LIVE
 
     setting_filename: str = "portfolio_strategy_setting.json"
     data_filename: str = "portfolio_strategy_data.json"
@@ -213,6 +216,10 @@ class StrategyEngine(BaseEngine):
 
         req: CancelRequest = order.create_cancel_request()
         self.main_engine.cancel_order(req, order.gateway_name)
+
+    def get_engine_type(self) -> EngineType:
+        """获取引擎类型"""
+        return self.engine_type
 
     def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
         """获取合约价格跳动"""
