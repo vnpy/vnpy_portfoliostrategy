@@ -215,11 +215,20 @@ class StrategyEngine(BaseEngine):
         self.main_engine.cancel_order(req, order.gateway_name)
 
     def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
-        """获取合约乘数"""
+        """获取合约价格跳动"""
         contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
 
         if contract:
             return contract.pricetick
+        else:
+            return None
+
+    def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> int:
+        """获取合约乘数"""
+        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+
+        if contract:
+            return contract.size
         else:
             return None
 
@@ -363,12 +372,15 @@ class StrategyEngine(BaseEngine):
         if data:
             for name in strategy.variables:
                 value: Optional[Any] = data.get(name, None)
+                if value is None:
+                    continue
+
                 # 对于持仓和目标数据字典，需要使用dict.update更新defaultdict
                 if name in {"pos_data", "target_data"}:
-                    data = getattr(strategy, name)
-                    data.update(value)
+                    strategy_data = getattr(strategy, name)
+                    strategy_data.update(value)
                 # 对于其他int/float/str/bool字段则可以直接赋值
-                elif value is not None:
+                else:
                     setattr(strategy, name, value)
 
         # 订阅行情

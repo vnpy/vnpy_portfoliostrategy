@@ -1,7 +1,15 @@
+# 1.0.5版本
+
+1. 增加回测爆仓检查
+2. 策略模板增加合约乘数查询函数get_size
+3. 加载日线和小时线数据时，不使用分段加载
+
+
 # 1.0.4版本
 
 1. 修复pos_data/target_data从缓存文件恢复数据，导致defaultdict变成dict的问题
 2. 改为使用OmsEngine提供的OffsetConverter组件
+3. 增加查询历史数据时的日志输出
 
 
 # 1.0.3版本

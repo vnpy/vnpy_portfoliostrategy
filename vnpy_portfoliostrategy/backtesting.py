@@ -36,7 +36,7 @@ class BacktestingEngine:
 
     gateway_name: str = "BACKTESTING"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """构造函数"""
         self.vt_symbols: List[str] = []
         self.start: datetime = None
@@ -144,33 +144,47 @@ class BacktestingEngine:
         interval_delta: timedelta = INTERVAL_DELTA_MAP[self.interval]
 
         for vt_symbol in self.vt_symbols:
-            start: datetime = self.start
-            end: datetime = self.start + progress_delta
-            progress = 0
+            if self.interval == Interval.MINUTE:
+                start: datetime = self.start
+                end: datetime = self.start + progress_delta
+                progress = 0
 
-            data_count = 0
-            while start < self.end:
-                end = min(end, self.end)
+                data_count = 0
+                while start < self.end:
+                    end = min(end, self.end)
 
+                    data: List[BarData] = load_bar_data(
+                        vt_symbol,
+                        self.interval,
+                        start,
+                        end
+                    )
+
+                    for bar in data:
+                        self.dts.add(bar.datetime)
+                        self.history_data[(bar.datetime, vt_symbol)] = bar
+                        data_count += 1
+
+                    progress += progress_delta / total_delta
+                    progress = min(progress, 1)
+                    progress_bar = "#" * int(progress * 10)
+                    self.output(f"{vt_symbol}加载进度：{progress_bar} [{progress:.0%}]")
+
+                    start = end + interval_delta
+                    end += (progress_delta + interval_delta)
+            else:
                 data: List[BarData] = load_bar_data(
                     vt_symbol,
                     self.interval,
-                    start,
-                    end
+                    self.start,
+                    self.end
                 )
 
                 for bar in data:
                     self.dts.add(bar.datetime)
                     self.history_data[(bar.datetime, vt_symbol)] = bar
-                    data_count += 1
 
-                progress += progress_delta / total_delta
-                progress = min(progress, 1)
-                progress_bar = "#" * int(progress * 10)
-                self.output(f"{vt_symbol}加载进度：{progress_bar} [{progress:.0%}]")
-
-                start = end + interval_delta
-                end += (progress_delta + interval_delta)
+                data_count = len(data)
 
             self.output(f"{vt_symbol}历史数据加载完成，数据量：{data_count}")
 
@@ -270,45 +284,51 @@ class BacktestingEngine:
         if df is None:
             df: DataFrame = self.daily_df
 
-        if df is None:
-            # 如果没有成交记录则设置所有指标结果为0
-            start_date: str = ""
-            end_date: str = ""
-            total_days: int = 0
-            profit_days: int = 0
-            loss_days: int = 0
-            end_balance: float = 0
-            max_drawdown: float = 0
-            max_ddpercent: float = 0
-            max_drawdown_duration: int = 0
-            total_net_pnl: float = 0
-            daily_net_pnl: float = 0
-            total_commission: float = 0
-            daily_commission: float = 0
-            total_slippage: float = 0
-            daily_slippage: float = 0
-            total_turnover: float = 0
-            daily_turnover: float = 0
-            total_trade_count: int = 0
-            daily_trade_count: int = 0
-            total_return: float = 0
-            annual_return: float = 0
-            daily_return: float = 0
-            return_std: float = 0
-            sharpe_ratio: float = 0
-            return_drawdown_ratio: float = 0
-        else:
-            # 计算资金相关指标
+        # 初始化统计指标
+        start_date: str = ""
+        end_date: str = ""
+        total_days: int = 0
+        profit_days: int = 0
+        loss_days: int = 0
+        end_balance: float = 0
+        max_drawdown: float = 0
+        max_ddpercent: float = 0
+        max_drawdown_duration: int = 0
+        total_net_pnl: float = 0
+        daily_net_pnl: float = 0
+        total_commission: float = 0
+        daily_commission: float = 0
+        total_slippage: float = 0
+        daily_slippage: float = 0
+        total_turnover: float = 0
+        daily_turnover: float = 0
+        total_trade_count: int = 0
+        daily_trade_count: int = 0
+        total_return: float = 0
+        annual_return: float = 0
+        daily_return: float = 0
+        return_std: float = 0
+        sharpe_ratio: float = 0
+        return_drawdown_ratio: float = 0
+
+        # 检查是否发生过爆仓
+        positive_balance: bool = False
+
+        # 计算资金相关指标
+        if df is not None:
             df["balance"] = df["net_pnl"].cumsum() + self.capital
             df["return"] = np.log(df["balance"] / df["balance"].shift(1)).fillna(0)
-            df["highlevel"] = (
-                df["balance"].rolling(
-                    min_periods=1, window=len(df), center=False).max()
-            )
+            df["highlevel"] = df["balance"].rolling(min_periods=1, window=len(df), center=False).max()
             df["drawdown"] = df["balance"] - df["highlevel"]
             df["ddpercent"] = df["drawdown"] / df["highlevel"] * 100
 
-            # 计算统计指标
+            # 检查是否发生过爆仓
+            positive_balance = (df["balance"] > 0).all()
+            if not positive_balance:
+                self.output("回测中出现爆仓（资金小于等于0），无法计算策略统计指标")
+
+        # 计算统计指标
+        if positive_balance:
             start_date = df.index[0]
             end_date = df.index[-1]
 
@@ -691,9 +711,13 @@ class BacktestingEngine:
         """保存策略数据到文件"""
         pass
 
-    def get_pricetick(self, strategy: StrategyTemplate, vt_symbol) -> float:
-        """获取合约乘数"""
+    def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
+        """获取合约价格跳动"""
         return self.priceticks[vt_symbol]
+
+    def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
+        """获取合约乘数"""
+        return self.sizes[vt_symbol]
 
     def put_strategy_event(self, strategy: StrategyTemplate) -> None:
         """推送事件更新策略界面"""
