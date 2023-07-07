@@ -7,6 +7,8 @@ from vnpy.trader.constant import Interval, Direction, Offset
 from vnpy.trader.object import BarData, TickData, OrderData, TradeData
 from vnpy.trader.utility import virtual
 
+from .base import EngineType
+
 if TYPE_CHECKING:
     from .engine import StrategyEngine
 
@@ -275,6 +277,10 @@ class StrategyTemplate(ABC):
     def write_log(self, msg: str) -> None:
         """记录日志"""
         self.strategy_engine.write_log(msg, self)
+
+    def get_engine_type(self) -> EngineType:
+        """查询引擎类型"""
+        return self.strategy_engine.get_engine_type()
 
     def get_pricetick(self, vt_symbol: str) -> float:
         """查询合约最小价格跳动"""
