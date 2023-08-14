@@ -274,7 +274,8 @@ class BacktestingEngine:
                 value = getattr(daily_result, key)
                 results[key].append(value)
 
-        self.daily_df: DataFrame = DataFrame.from_dict(results).set_index("date")
+        if results:
+            self.daily_df: DataFrame = DataFrame.from_dict(results).set_index("date")
 
         self.output("逐日盯市盈亏计算完成")
         return self.daily_df
