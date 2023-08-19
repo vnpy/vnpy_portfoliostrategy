@@ -560,7 +560,7 @@ class BacktestingEngine:
             if bar:
                 # 更新K线以供委托撮合
                 self.bars[vt_symbol] = bar
-                # 缓存K线数据以供strategy.on_bars更新
+                # 缓存K线数据以供strategy.on_bar更新
                 bars[vt_symbol] = bar
             # 如果获取不到，但self.bars字典中已有合约数据缓存, 使用之前的数据填充
             elif vt_symbol in self.bars:
@@ -579,7 +579,10 @@ class BacktestingEngine:
                 self.bars[vt_symbol] = bar
 
         self.cross_limit_order()
-        self.strategy.on_bars(bars)
+
+        for vt_symbol in self.vt_symbols:
+            bar: BarData = self.bars[vt_symbol]
+            self.strategy.on_bar(bar)
 
         if self.strategy.inited:
             self.update_daily_close(self.bars, dt)

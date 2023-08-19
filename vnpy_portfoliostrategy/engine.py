@@ -281,7 +281,8 @@ class StrategyEngine(BaseEngine):
                     )
                     bars[vt_symbol] = bar
 
-            self.call_strategy_func(strategy, strategy.on_bars, bars)
+                if bar:
+                    self.call_strategy_func(strategy, strategy.on_bar, bar)
 
     def load_bar(self, vt_symbol: str, days: int, interval: Interval) -> List[BarData]:
         """加载单个合约历史数据"""
