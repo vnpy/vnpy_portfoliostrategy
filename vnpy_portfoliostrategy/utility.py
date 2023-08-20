@@ -47,7 +47,7 @@ class PortfolioBarGenerator:
 
         if not bar:
             bar = BarData(
-                symbol =tick.symbol,
+                symbol=tick.symbol,
                 exchange=tick.exchange,
                 interval=Interval.MINUTE,
                 datetime=tick.datetime,
