@@ -36,16 +36,18 @@ class PortfolioBarGenerator:
         if not tick.last_price:
             return
 
-        last_dt = self.last_dts.get(tick.vt_symbol, None)
-        bar: Optional[BarData] = self.bars.get(tick.vt_symbol, None)
+        vt_symbol = tick.vt_symbol
+        last_dt = self.last_dts.get(vt_symbol, None)
+        bar: Optional[BarData] = self.bars.get(vt_symbol, None)
         if last_dt and last_dt.minute != tick.datetime.minute:
             if bar:
                 bar.datetime = bar.datetime.replace(second=0, microsecond=0)
                 self.on_bar(bar)
+                self.bars[vt_symbol] = None
 
         if not bar:
             bar = BarData(
-                symbol=tick.symbol,
+                symbol=vt_symbol,
                 exchange=tick.exchange,
                 interval=Interval.MINUTE,
                 datetime=tick.datetime,
@@ -56,7 +58,7 @@ class PortfolioBarGenerator:
                 close_price=tick.last_price,
                 open_interest=tick.open_interest
             )
-            self.bars[bar.vt_symbol] = bar
+            self.bars[vt_symbol] = bar
         else:
             bar.high_price = max(bar.high_price, tick.last_price)
             bar.low_price = min(bar.low_price, tick.last_price)
@@ -64,14 +66,14 @@ class PortfolioBarGenerator:
             bar.open_interest = tick.open_interest
             bar.datetime = tick.datetime
 
-        last_tick: Optional[TickData] = self.last_ticks.get(tick.vt_symbol, None)
+        last_tick: Optional[TickData] = self.last_ticks.get(vt_symbol, None)
         if last_tick:
             bar.volume += max(tick.volume - last_tick.volume, 0)
             bar.turnover += max(tick.turnover - last_tick.turnover, 0)
 
-        self.last_ticks[tick.vt_symbol] = tick
+        self.last_ticks[vt_symbol] = tick
         last_dt = tick.datetime
-        self.last_dts[tick.vt_symbol] = last_dt
+        self.last_dts[vt_symbol] = last_dt
 
     def update_bar(self, bar: BarData) -> None:
         """更新一分钟K线"""
