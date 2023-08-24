@@ -209,7 +209,7 @@ class PortfolioBarGenerator:
         if finished_bar:
             self.on_hour_bar(finished_bar)
 
-    def on_hour_bars(self, bar: BarData) -> None:
+    def on_hour_bar(self, bar: BarData) -> None:
         """推送小时K线"""
         if self.window == 1:
             self.on_window_bar(bar)
