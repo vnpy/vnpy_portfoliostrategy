@@ -18,7 +18,7 @@ class PortfolioBarGenerator:
         self.on_bar: Callable = on_bar
 
         self.interval: Interval = interval
-        self.interval_count: int = 0
+        self.interval_counts: Dict[str, int] = {}
 
         self.bars: Dict[str, BarData] = {}
         self.last_ticks: Dict[str, TickData] = {}
@@ -242,8 +242,10 @@ class PortfolioBarGenerator:
             window_bar.turnover += bar.turnover
             window_bar.open_interest = bar.open_interest
 
-            self.interval_count += 1
-            if not self.interval_count % self.window:
-                self.interval_count = 0
+            interval_count = self.interval_counts.get(vt_symbol, 0)
+            interval_count += 1
+            if not interval_count % self.window:
+                interval_count = 0
                 self.on_window_bar(window_bar)
                 self.window_bars[vt_symbol] = None
+            self.interval_counts[vt_symbol] = interval_count
