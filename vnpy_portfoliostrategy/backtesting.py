@@ -365,13 +365,13 @@ class BacktestingEngine:
             daily_trade_count: int = total_trade_count / total_days
 
             total_return: float = (end_balance / self.capital - 1) * 100
-            annual_return: float = total_return / total_days * 240
+            annual_return: float = total_return / total_days * 365
             daily_return: float = df["return"].mean() * 100
             return_std: float = df["return"].std() * 100
 
             if return_std:
-                daily_risk_free: float = self.risk_free / np.sqrt(240)
-                sharpe_ratio: float = (daily_return - daily_risk_free) / return_std * np.sqrt(240)
+                daily_risk_free: float = self.risk_free / np.sqrt(365)
+                sharpe_ratio: float = (daily_return - daily_risk_free) / return_std * np.sqrt(365)
             else:
                 sharpe_ratio: float = 0
 
