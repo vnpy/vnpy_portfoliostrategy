@@ -10,7 +10,7 @@ class PortfolioBarGenerator:
     def __init__(
         self,
         on_bars: Callable,
-        window: int = 0,
+        window: int = 1,
         on_window_bars: Callable = None,
         interval: Interval = Interval.MINUTE
     ) -> None:
