@@ -251,6 +251,7 @@ class BacktestingEngine:
         start_poses: dict = {}
 
         for daily_result in self.daily_results.values():
+            daily_result.start_poses = start_poses
             daily_result.calculate_pnl(
                 pre_closes,
                 start_poses,
