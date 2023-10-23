@@ -885,7 +885,7 @@ class PortfolioDailyResult:
 
     def update_close_prices(self, close_prices: Dict[str, float]) -> None:
         """更新每日收盘价"""
-        self.close_prices = close_prices
+        self.close_prices.update(close_prices)
 
         for vt_symbol, close_price in close_prices.items():
             contract_result: Optional[ContractDailyResult] = self.contract_results.get(vt_symbol, None)
