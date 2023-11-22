@@ -470,6 +470,9 @@ class StrategyEngine(BaseEngine):
         self.strategies.pop(strategy_name)
         self.save_strategy_setting()
 
+        self.strategy_data.pop(strategy_name, None)
+        save_json(self.data_filename, self.strategy_data)
+
         return True
 
     def load_strategy_class(self) -> None:
