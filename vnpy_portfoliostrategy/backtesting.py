@@ -494,7 +494,12 @@ class BacktestingEngine:
         fig.update_layout(height=1000, width=1000)
         fig.show()
 
-    def run_bf_optimization(self, optimization_setting: OptimizationSetting, output=True):
+    def run_bf_optimization(
+        self,
+        optimization_setting: OptimizationSetting,
+        output=True,
+        max_workers: int = None
+    ) -> list:
         """暴力穷举优化"""
         if not check_optimization_setting(optimization_setting):
             return
@@ -504,6 +509,7 @@ class BacktestingEngine:
             evaluate_func,
             optimization_setting,
             get_target_value,
+            max_workers=max_workers,
             output=self.output,
         )
 
@@ -516,7 +522,13 @@ class BacktestingEngine:
 
     run_optimization = run_bf_optimization
 
-    def run_ga_optimization(self, optimization_setting: OptimizationSetting, output=True):
+    def run_ga_optimization(
+        self,
+        optimization_setting: OptimizationSetting,
+        max_workers: int = None,
+        ngen_size: int = 30,
+        output=True
+    ) -> list:
         """遗传算法优化"""
         if not check_optimization_setting(optimization_setting):
             return
@@ -526,6 +538,8 @@ class BacktestingEngine:
             evaluate_func,
             optimization_setting,
             get_target_value,
+            max_workers=max_workers,
+            ngen_size=ngen_size,
             output=self.output
         )
 
