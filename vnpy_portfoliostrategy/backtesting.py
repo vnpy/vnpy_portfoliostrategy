@@ -254,7 +254,6 @@ class BacktestingEngine:
         start_poses: dict = {}
 
         for daily_result in self.daily_results.values():
-            daily_result.start_poses = start_poses
             daily_result.calculate_pnl(
                 pre_closes,
                 start_poses,
@@ -881,6 +880,7 @@ class PortfolioDailyResult:
     ) -> None:
         """计算盈亏"""
         self.pre_closes = pre_closes
+        self.start_poses = start_poses
 
         for vt_symbol, contract_result in self.contract_results.items():
             contract_result.calculate_pnl(
