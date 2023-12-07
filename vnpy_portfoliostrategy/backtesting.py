@@ -254,6 +254,7 @@ class BacktestingEngine:
         start_poses: dict = {}
 
         for daily_result in self.daily_results.values():
+            daily_result.start_poses = start_poses
             daily_result.calculate_pnl(
                 pre_closes,
                 start_poses,
@@ -903,7 +904,7 @@ class PortfolioDailyResult:
 
     def update_close_prices(self, close_prices: Dict[str, float]) -> None:
         """更新每日收盘价"""
-        self.close_prices = close_prices
+        self.close_prices.update(close_prices)
 
         for vt_symbol, close_price in close_prices.items():
             contract_result: Optional[ContractDailyResult] = self.contract_results.get(vt_symbol, None)
