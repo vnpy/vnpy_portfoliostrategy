@@ -23,6 +23,7 @@
 
 from pathlib import Path
 
+import importlib_metadata
 from vnpy.trader.app import BaseApp
 from vnpy.trader.constant import Direction
 from vnpy.trader.object import TickData, BarData, TradeData, OrderData
@@ -32,6 +33,12 @@ from .base import APP_NAME
 from .engine import StrategyEngine
 from .template import StrategyTemplate
 from .backtesting import BacktestingEngine
+
+
+try:
+    __version__ = importlib_metadata.version("vnpy_portfoliostrategy")
+except importlib_metadata.PackageNotFoundError:
+    __version__ = "dev"
 
 
 class PortfolioStrategyApp(BaseApp):
