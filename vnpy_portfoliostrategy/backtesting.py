@@ -22,6 +22,7 @@ from vnpy.trader.optimize import (
 )
 
 from .base import EngineType
+from .locale import _
 from .template import StrategyTemplate
 
 
@@ -130,13 +131,13 @@ class BacktestingEngine:
 
     def load_data(self) -> None:
         """加载历史数据"""
-        self.output("开始加载历史数据")
+        self.output(_("开始加载历史数据"))
 
         if not self.end:
             self.end = datetime.now()
 
         if self.start >= self.end:
-            self.output("起始日期必须小于结束日期")
+            self.output(_("起始日期必须小于结束日期"))
             return
 
         # 清理上次加载的历史数据
@@ -173,7 +174,9 @@ class BacktestingEngine:
                     progress += progress_delta / total_delta
                     progress = min(progress, 1)
                     progress_bar = "#" * int(progress * 10)
-                    self.output(f"{vt_symbol}加载进度：{progress_bar} [{progress:.0%}]")
+                    self.output(_("{}加载进度：{} [{:.0%}]").format(
+                        vt_symbol, progress_bar, progress
+                    ))
 
                     start = end + interval_delta
                     end += (progress_delta + interval_delta)
@@ -191,9 +194,9 @@ class BacktestingEngine:
 
                 data_count = len(data)
 
-            self.output(f"{vt_symbol}历史数据加载完成，数据量：{data_count}")
+            self.output(_("{}历史数据加载完成，数据量：{}").format(vt_symbol, data_count))
 
-        self.output("所有历史数据加载完成")
+        self.output(_("所有历史数据加载完成"))
 
     def run_backtesting(self) -> None:
         """开始回测"""
@@ -215,34 +218,34 @@ class BacktestingEngine:
             try:
                 self.new_bars(dt)
             except Exception:
-                self.output("触发异常，回测终止")
+                self.output(_("触发异常，回测终止"))
                 self.output(traceback.format_exc())
                 return
 
         self.strategy.inited = True
-        self.output("策略初始化完成")
+        self.output(_("策略初始化完成"))
 
         self.strategy.on_start()
         self.strategy.trading = True
-        self.output("开始回放历史数据")
+        self.output(_("开始回放历史数据"))
 
         # 使用剩余历史数据进行策略回测
         for dt in dts[ix:]:
             try:
                 self.new_bars(dt)
             except Exception:
-                self.output("触发异常，回测终止")
+                self.output(_("触发异常，回测终止"))
                 self.output(traceback.format_exc())
                 return
 
-        self.output("历史数据回放结束")
+        self.output(_("历史数据回放结束"))
 
     def calculate_result(self) -> DataFrame:
         """计算逐日盯市盈亏"""
-        self.output("开始计算逐日盯市盈亏")
+        self.output(_("开始计算逐日盯市盈亏"))
 
         if not self.trades:
-            self.output("成交记录为空，无法计算")
+            self.output(_("成交记录为空，无法计算"))
             return
 
         for trade in self.trades.values():
@@ -280,12 +283,12 @@ class BacktestingEngine:
         if results:
             self.daily_df: DataFrame = DataFrame.from_dict(results).set_index("date")
 
-        self.output("逐日盯市盈亏计算完成")
+        self.output(_("逐日盯市盈亏计算完成"))
         return self.daily_df
 
     def calculate_statistics(self, df: DataFrame = None, output=True) -> dict:
         """计算策略统计指标"""
-        self.output("开始计算策略统计指标")
+        self.output(_("开始计算策略统计指标"))
 
         if df is None:
             df: DataFrame = self.daily_df
@@ -331,7 +334,7 @@ class BacktestingEngine:
             # 检查是否发生过爆仓
             positive_balance = (df["balance"] > 0).all()
             if not positive_balance:
-                self.output("回测中出现爆仓（资金小于等于0），无法计算策略统计指标")
+                self.output(_("回测中出现爆仓（资金小于等于0），无法计算策略统计指标"))
 
         # 计算统计指标
         if positive_balance:
@@ -384,38 +387,38 @@ class BacktestingEngine:
         # 输出结果
         if output:
             self.output("-" * 30)
-            self.output(f"首个交易日：\t{start_date}")
-            self.output(f"最后交易日：\t{end_date}")
+            self.output(_("首个交易日：\t{}").format(start_date))
+            self.output(_("最后交易日：\t{}").format(end_date))
 
-            self.output(f"总交易日：\t{total_days}")
-            self.output(f"盈利交易日：\t{profit_days}")
-            self.output(f"亏损交易日：\t{loss_days}")
+            self.output(_("总交易日：\t{}").format(total_days))
+            self.output(_("盈利交易日：\t{}").format(profit_days))
+            self.output(_("亏损交易日：\t{}").format(loss_days))
 
-            self.output(f"起始资金：\t{self.capital:,.2f}")
-            self.output(f"结束资金：\t{end_balance:,.2f}")
+            self.output(_("起始资金：\t{:,.2f}").format(self.capital))
+            self.output(_("结束资金：\t{:,.2f}").format(end_balance))
 
-            self.output(f"总收益率：\t{total_return:,.2f}%")
-            self.output(f"年化收益：\t{annual_return:,.2f}%")
-            self.output(f"最大回撤: \t{max_drawdown:,.2f}")
-            self.output(f"百分比最大回撤: {max_ddpercent:,.2f}%")
-            self.output(f"最长回撤天数: \t{max_drawdown_duration}")
+            self.output(_("总收益率：\t{:,.2f}%").format(total_return))
+            self.output(_("年化收益：\t{:,.2f}%").format(annual_return))
+            self.output(_("最大回撤: \t{:,.2f}").format(max_drawdown))
+            self.output(_("百分比最大回撤: {:,.2f}%").format(max_ddpercent))
+            self.output(_("最长回撤天数: \t{}").format(max_drawdown_duration))
 
-            self.output(f"总盈亏：\t{total_net_pnl:,.2f}")
-            self.output(f"总手续费：\t{total_commission:,.2f}")
-            self.output(f"总滑点：\t{total_slippage:,.2f}")
-            self.output(f"总成交金额：\t{total_turnover:,.2f}")
-            self.output(f"总成交笔数：\t{total_trade_count}")
+            self.output(_("总盈亏：\t{:,.2f}").format(total_net_pnl))
+            self.output(_("总手续费：\t{:,.2f}").format(total_commission))
+            self.output(_("总滑点：\t{:,.2f}").format(total_slippage))
+            self.output(_("总成交金额：\t{:,.2f}").format(total_turnover))
+            self.output(_("总成交笔数：\t{}").format(total_trade_count))
 
-            self.output(f"日均盈亏：\t{daily_net_pnl:,.2f}")
-            self.output(f"日均手续费：\t{daily_commission:,.2f}")
-            self.output(f"日均滑点：\t{daily_slippage:,.2f}")
-            self.output(f"日均成交金额：\t{daily_turnover:,.2f}")
-            self.output(f"日均成交笔数：\t{daily_trade_count}")
+            self.output(_("日均盈亏：\t{:,.2f}").format(daily_net_pnl))
+            self.output(_("日均手续费：\t{:,.2f}").format(daily_commission))
+            self.output(_("日均滑点：\t{:,.2f}").format(daily_slippage))
+            self.output(_("日均成交金额：\t{:,.2f}").format(daily_turnover))
+            self.output(_("日均成交笔数：\t{}").format(daily_trade_count))
 
-            self.output(f"日均收益率：\t{daily_return:,.2f}%")
-            self.output(f"收益标准差：\t{return_std:,.2f}%")
+            self.output(_("日均收益率：\t{:,.2f}%").format(daily_return))
+            self.output(_("收益标准差：\t{:,.2f}%").format(return_std))
             self.output(f"Sharpe Ratio：\t{sharpe_ratio:,.2f}")
-            self.output(f"收益回撤比：\t{return_drawdown_ratio:,.2f}")
+            self.output(_("收益回撤比：\t{:,.2f}").format(return_drawdown_ratio))
 
         statistics: dict = {
             "start_date": start_date,
@@ -452,7 +455,7 @@ class BacktestingEngine:
                 value = 0
             statistics[key] = np.nan_to_num(value)
 
-        self.output("策略统计指标计算完成")
+        self.output(_("策略统计指标计算完成"))
         return statistics
 
     def show_chart(self, df: DataFrame = None) -> None:
@@ -516,7 +519,7 @@ class BacktestingEngine:
 
         if output:
             for result in results:
-                msg: str = f"参数：{result[0]}, 目标：{result[1]}"
+                msg: str = _("参数：{}, 目标：{}").format(result[0], result[1])
                 self.output(msg)
 
         return results
@@ -546,7 +549,7 @@ class BacktestingEngine:
 
         if output:
             for result in results:
-                msg: str = f"参数：{result[0]}, 目标：{result[1]}"
+                msg: str = _("参数：{}, 目标：{}").format(result[0], result[1])
                 self.output(msg)
 
         return results

@@ -1,0 +1,1 @@
+recursive-include vnpy_portfoliostrategy *.ico *.ini *.dll *.so *.pyd *.h *.hpp *.cpp, *.mo

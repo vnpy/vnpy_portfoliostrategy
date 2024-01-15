@@ -6,13 +6,14 @@ from vnpy.trader.object import TickData, BarData
 from vnpy.trader.constant import Direction
 
 from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
+from vnpy_portfoliostrategy.locale import _
 from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 
 
 class TrendFollowingStrategy(StrategyTemplate):
     """ATR-RSI趋势跟踪策略"""
 
-    author = "用Python的交易员"
+    author = _("用Python的交易员")
 
     atr_window = 22
     atr_ma_window = 10
@@ -66,7 +67,7 @@ class TrendFollowingStrategy(StrategyTemplate):
 
     def on_init(self) -> None:
         """策略初始化回调"""
-        self.write_log("策略初始化")
+        self.write_log(_("策略初始化"))
 
         self.rsi_buy = 50 + self.rsi_entry
         self.rsi_sell = 50 - self.rsi_entry
@@ -75,11 +76,11 @@ class TrendFollowingStrategy(StrategyTemplate):
 
     def on_start(self) -> None:
         """策略启动回调"""
-        self.write_log("策略启动")
+        self.write_log(_("策略启动"))
 
     def on_stop(self) -> None:
         """策略停止回调"""
-        self.write_log("策略停止")
+        self.write_log(_("策略停止"))
 
     def on_tick(self, tick: TickData) -> None:
         """行情推送回调"""
