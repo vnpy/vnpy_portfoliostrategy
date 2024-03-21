@@ -217,6 +217,11 @@ class StrategyEngine(BaseEngine):
         req: CancelRequest = order.create_cancel_request()
         self.main_engine.cancel_order(req, order.gateway_name)
 
+    def cancel_all(self, strategy: StrategyTemplate) -> None:
+        """委托撤单"""
+        for vt_orderid in list(strategy.active_orderids):
+            self.cancel_order(strategy, vt_orderid)
+
     def get_engine_type(self) -> EngineType:
         """获取引擎类型"""
         return self.engine_type
@@ -436,7 +441,7 @@ class StrategyEngine(BaseEngine):
         strategy.trading = False
 
         # 撤销全部委托
-        strategy.cancel_all()
+        self.cancel_all(strategy)
 
         # 同步数据状态
         self.sync_strategy_data(strategy)
