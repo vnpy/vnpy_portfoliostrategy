@@ -1,4 +1,3 @@
-from typing import List, Dict
 from datetime import datetime
 
 from vnpy.trader.utility import ArrayManager
@@ -43,22 +42,22 @@ class TrendFollowingStrategy(StrategyTemplate):
         self,
         strategy_engine: StrategyEngine,
         strategy_name: str,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
-        self.rsi_data: Dict[str, float] = {}
-        self.atr_data: Dict[str, float] = {}
-        self.atr_ma: Dict[str, float] = {}
-        self.intra_trade_high: Dict[str, float] = {}
-        self.intra_trade_low: Dict[str, float] = {}
+        self.rsi_data: dict[str, float] = {}
+        self.atr_data: dict[str, float] = {}
+        self.atr_ma: dict[str, float] = {}
+        self.intra_trade_high: dict[str, float] = {}
+        self.intra_trade_low: dict[str, float] = {}
 
         self.last_tick_time: datetime = None
 
         # 创建每个合约的ArrayManager
-        self.ams: Dict[str, ArrayManager] = {}
+        self.ams: dict[str, ArrayManager] = {}
         for vt_symbol in self.vt_symbols:
             self.ams[vt_symbol] = ArrayManager()
 
@@ -85,7 +84,7 @@ class TrendFollowingStrategy(StrategyTemplate):
         """行情推送回调"""
         self.pbg.update_tick(tick)
 
-    def on_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         # 更新K线计算RSI数值
         for vt_symbol, bar in bars.items():

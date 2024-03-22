@@ -1,5 +1,3 @@
-from typing import Dict
-
 from vnpy.event import Event, EventEngine
 from vnpy.trader.engine import MainEngine
 from vnpy.trader.ui import QtCore, QtGui, QtWidgets
@@ -30,7 +28,7 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
         self.event_engine: EventEngine = event_engine
         self.strategy_engine: StrategyEngine = main_engine.get_engine(APP_NAME)
 
-        self.managers: Dict[str, StrategyManager] = {}
+        self.managers: dict[str, StrategyManager] = {}
 
         self.init_ui()
         self.register_event()

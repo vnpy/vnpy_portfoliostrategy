@@ -1,6 +1,6 @@
 from abc import ABC
 from copy import copy
-from typing import Dict, Set, List, TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional
 from collections import defaultdict
 
 from vnpy.trader.constant import Interval, Direction, Offset
@@ -24,25 +24,25 @@ class StrategyTemplate(ABC):
         self,
         strategy_engine: "StrategyEngine",
         strategy_name: str,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
         self.strategy_engine: "StrategyEngine" = strategy_engine
         self.strategy_name: str = strategy_name
-        self.vt_symbols: List[str] = vt_symbols
+        self.vt_symbols: list[str] = vt_symbols
 
         # 状态控制变量
         self.inited: bool = False
         self.trading: bool = False
 
         # 持仓数据字典
-        self.pos_data: Dict[str, int] = defaultdict(int)        # 实际持仓
-        self.target_data: Dict[str, int] = defaultdict(int)     # 目标持仓
+        self.pos_data: dict[str, int] = defaultdict(int)        # 实际持仓
+        self.target_data: dict[str, int] = defaultdict(int)     # 目标持仓
 
         # 委托缓存容器
-        self.orders: Dict[str, OrderData] = {}
-        self.active_orderids: Set[str] = set()
+        self.orders: dict[str, OrderData] = {}
+        self.active_orderids: set[str] = set()
 
         # 复制变量名列表，插入默认变量内容
         self.variables: list = copy(self.variables)
@@ -115,7 +115,7 @@ class StrategyTemplate(ABC):
         pass
 
     @virtual
-    def on_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         pass
 
@@ -133,19 +133,19 @@ class StrategyTemplate(ABC):
         if not order.is_active() and order.vt_orderid in self.active_orderids:
             self.active_orderids.remove(order.vt_orderid)
 
-    def buy(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> List[str]:
+    def buy(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> list[str]:
         """买入开仓"""
         return self.send_order(vt_symbol, Direction.LONG, Offset.OPEN, price, volume, lock, net)
 
-    def sell(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> List[str]:
+    def sell(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> list[str]:
         """卖出平仓"""
         return self.send_order(vt_symbol, Direction.SHORT, Offset.CLOSE, price, volume, lock, net)
 
-    def short(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> List[str]:
+    def short(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> list[str]:
         """卖出开仓"""
         return self.send_order(vt_symbol, Direction.SHORT, Offset.OPEN, price, volume, lock, net)
 
-    def cover(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> List[str]:
+    def cover(self, vt_symbol: str, price: float, volume: float, lock: bool = False, net: bool = False) -> list[str]:
         """买入平仓"""
         return self.send_order(vt_symbol, Direction.LONG, Offset.CLOSE, price, volume, lock, net)
 
@@ -158,7 +158,7 @@ class StrategyTemplate(ABC):
         volume: float,
         lock: bool = False,
         net: bool = False,
-    ) -> List[str]:
+    ) -> list[str]:
         """发送委托"""
         if self.trading:
             vt_orderids: list = self.strategy_engine.send_order(
@@ -194,7 +194,7 @@ class StrategyTemplate(ABC):
         """设置目标仓位"""
         self.target_data[vt_symbol] = target
 
-    def rebalance_portfolio(self, bars: Dict[str, BarData]) -> None:
+    def rebalance_portfolio(self, bars: dict[str, BarData]) -> None:
         """基于目标执行调仓交易"""
         self.cancel_all()
 
@@ -270,7 +270,7 @@ class StrategyTemplate(ABC):
         """查询委托数据"""
         return self.orders.get(vt_orderid, None)
 
-    def get_all_active_orderids(self) -> List[OrderData]:
+    def get_all_active_orderids(self) -> list[OrderData]:
         """获取全部活动状态的委托号"""
         return list(self.active_orderids)
 

@@ -1,4 +1,3 @@
-from typing import List, Dict
 from datetime import datetime
 
 from vnpy.trader.utility import ArrayManager, Interval
@@ -36,24 +35,24 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         self,
         strategy_engine: StrategyEngine,
         strategy_name: str,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
-        self.boll_up: Dict[str, float] = {}
-        self.boll_down: Dict[str, float] = {}
-        self.cci_value: Dict[str, float] = {}
-        self.atr_value: Dict[str, float] = {}
-        self.intra_trade_high: Dict[str, float] = {}
-        self.intra_trade_low: Dict[str, float] = {}
+        self.boll_up: dict[str, float] = {}
+        self.boll_down: dict[str, float] = {}
+        self.cci_value: dict[str, float] = {}
+        self.atr_value: dict[str, float] = {}
+        self.intra_trade_high: dict[str, float] = {}
+        self.intra_trade_low: dict[str, float] = {}
 
-        self.targets: Dict[str, int] = {}
+        self.targets: dict[str, int] = {}
         self.last_tick_time: datetime = None
 
         # 获取合约信息
-        self.ams: Dict[str, ArrayManager] = {}
+        self.ams: dict[str, ArrayManager] = {}
         for vt_symbol in self.vt_symbols:
             self.ams[vt_symbol] = ArrayManager()
             self.targets[vt_symbol] = 0
@@ -78,11 +77,11 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         """行情推送回调"""
         self.pbg.update_tick(tick)
 
-    def on_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         self.pbg.update_bars(bars)
 
-    def on_2hour_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_2hour_bars(self, bars: dict[str, BarData]) -> None:
         """2小时K线回调"""
         self.cancel_all()
 

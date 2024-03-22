@@ -1,4 +1,3 @@
-from typing import List, Dict
 from datetime import datetime
 
 from vnpy.trader.utility import BarGenerator, extract_vt_symbol
@@ -50,13 +49,13 @@ class PcpArbitrageStrategy(StrategyTemplate):
         self,
         strategy_engine: StrategyEngine,
         strategy_name: str,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
-        self.bgs: Dict[str, BarGenerator] = {}
+        self.bgs: dict[str, BarGenerator] = {}
         self.last_tick_time: datetime = None
 
         # 绑定合约代码
@@ -108,7 +107,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
 
         self.last_tick_time = tick.datetime
 
-    def on_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         self.cancel_all()
 

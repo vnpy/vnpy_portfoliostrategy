@@ -1,4 +1,3 @@
-from typing import List, Dict
 from datetime import datetime
 
 import numpy as np
@@ -50,13 +49,13 @@ class PairTradingStrategy(StrategyTemplate):
         self,
         strategy_engine: StrategyEngine,
         strategy_name: str,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
-        self.bgs: Dict[str, BarGenerator] = {}
+        self.bgs: dict[str, BarGenerator] = {}
         self.last_tick_time: datetime = None
 
         self.spread_count: int = 0
@@ -102,7 +101,7 @@ class PairTradingStrategy(StrategyTemplate):
 
         self.last_tick_time = tick.datetime
 
-    def on_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         # 获取期权腿K线
         leg1_bar = bars.get(self.leg1_symbol, None)

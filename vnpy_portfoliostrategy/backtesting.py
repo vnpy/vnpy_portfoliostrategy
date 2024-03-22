@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Optional
 from functools import lru_cache, partial
 from copy import copy
 import traceback
@@ -25,7 +25,7 @@ from .base import EngineType
 from .template import StrategyTemplate
 
 
-INTERVAL_DELTA_MAP: Dict[Interval, timedelta] = {
+INTERVAL_DELTA_MAP: dict[Interval, timedelta] = {
     Interval.MINUTE: timedelta(minutes=1),
     Interval.HOUR: timedelta(hours=1),
     Interval.DAILY: timedelta(days=1),
@@ -40,14 +40,14 @@ class BacktestingEngine:
 
     def __init__(self) -> None:
         """构造函数"""
-        self.vt_symbols: List[str] = []
+        self.vt_symbols: list[str] = []
         self.start: datetime = None
         self.end: datetime = None
 
-        self.rates: Dict[str, float] = 0
-        self.slippages: Dict[str, float] = 0
-        self.sizes: Dict[str, float] = 1
-        self.priceticks: Dict[str, float] = 0
+        self.rates: dict[str, float] = 0
+        self.slippages: dict[str, float] = 0
+        self.sizes: dict[str, float] = 1
+        self.priceticks: dict[str, float] = 0
 
         self.capital: float = 1_000_000
         self.risk_free: float = 0
@@ -55,24 +55,24 @@ class BacktestingEngine:
 
         self.strategy_class: StrategyTemplate = None
         self.strategy: StrategyTemplate = None
-        self.bars: Dict[str, BarData] = {}
+        self.bars: dict[str, BarData] = {}
         self.datetime: datetime = None
 
         self.interval: Interval = None
         self.days: int = 0
-        self.history_data: Dict[Tuple, BarData] = {}
-        self.dts: Set[datetime] = set()
+        self.history_data: dict[tuple, BarData] = {}
+        self.dts: set[datetime] = set()
 
         self.limit_order_count: int = 0
-        self.limit_orders: Dict[str, OrderData] = {}
-        self.active_limit_orders: Dict[str, OrderData] = {}
+        self.limit_orders: dict[str, OrderData] = {}
+        self.active_limit_orders: dict[str, OrderData] = {}
 
         self.trade_count: int = 0
-        self.trades: Dict[str, TradeData] = {}
+        self.trades: dict[str, TradeData] = {}
 
         self.logs: list = []
 
-        self.daily_results: Dict[date, PortfolioDailyResult] = {}
+        self.daily_results: dict[date, PortfolioDailyResult] = {}
         self.daily_df: DataFrame = None
 
     def clear_data(self) -> None:
@@ -94,13 +94,13 @@ class BacktestingEngine:
 
     def set_parameters(
         self,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         interval: Interval,
         start: datetime,
-        rates: Dict[str, float],
-        slippages: Dict[str, float],
-        sizes: Dict[str, float],
-        priceticks: Dict[str, float],
+        rates: dict[str, float],
+        slippages: dict[str, float],
+        sizes: dict[str, float],
+        priceticks: dict[str, float],
         capital: int = 0,
         end: datetime = None,
         risk_free: float = 0,
@@ -158,7 +158,7 @@ class BacktestingEngine:
                 while start < self.end:
                     end = min(end, self.end)
 
-                    data: List[BarData] = load_bar_data(
+                    data: list[BarData] = load_bar_data(
                         vt_symbol,
                         self.interval,
                         start,
@@ -178,7 +178,7 @@ class BacktestingEngine:
                     start = end + interval_delta
                     end += (progress_delta + interval_delta)
             else:
-                data: List[BarData] = load_bar_data(
+                data: list[BarData] = load_bar_data(
                     vt_symbol,
                     self.interval,
                     self.start,
@@ -551,7 +551,7 @@ class BacktestingEngine:
 
         return results
 
-    def update_daily_close(self, bars: Dict[str, BarData], dt: datetime) -> None:
+    def update_daily_close(self, bars: dict[str, BarData], dt: datetime) -> None:
         """更新每日收盘价"""
         d: date = dt.date()
 
@@ -570,7 +570,7 @@ class BacktestingEngine:
         """历史数据推送"""
         self.datetime = dt
 
-        bars: Dict[str, BarData] = {}
+        bars: dict[str, BarData] = {}
         for vt_symbol in self.vt_symbols:
             bar: Optional[BarData] = self.history_data.get((dt, vt_symbol), None)
 
@@ -684,7 +684,7 @@ class BacktestingEngine:
         volume: float,
         lock: bool,
         net: bool
-    ) -> List[str]:
+    ) -> list[str]:
         """发送委托"""
         price: float = round_to(price, self.priceticks[vt_symbol])
         symbol, exchange = extract_vt_symbol(vt_symbol)
@@ -751,15 +751,15 @@ class BacktestingEngine:
         """输出回测引擎信息"""
         print(f"{datetime.now()}\t{msg}")
 
-    def get_all_trades(self) -> List[TradeData]:
+    def get_all_trades(self) -> list[TradeData]:
         """获取所有成交信息"""
         return list(self.trades.values())
 
-    def get_all_orders(self) -> List[OrderData]:
+    def get_all_orders(self) -> list[OrderData]:
         """获取所有委托信息"""
         return list(self.limit_orders.values())
 
-    def get_all_daily_results(self) -> List["PortfolioDailyResult"]:
+    def get_all_daily_results(self) -> list["PortfolioDailyResult"]:
         """获取所有每日盈亏信息"""
         return list(self.daily_results.values())
 
@@ -773,7 +773,7 @@ class ContractDailyResult:
         self.close_price: float = close_price
         self.pre_close: float = 0
 
-        self.trades: List[TradeData] = []
+        self.trades: list[TradeData] = []
         self.trade_count: int = 0
 
         self.start_pos: float = 0
@@ -843,15 +843,15 @@ class ContractDailyResult:
 class PortfolioDailyResult:
     """组合每日盈亏结果"""
 
-    def __init__(self, result_date: date, close_prices: Dict[str, float]) -> None:
+    def __init__(self, result_date: date, close_prices: dict[str, float]) -> None:
         """"""
         self.date: date = result_date
-        self.close_prices: Dict[str, float] = close_prices
-        self.pre_closes: Dict[str, float] = {}
-        self.start_poses: Dict[str, float] = {}
-        self.end_poses: Dict[str, float] = {}
+        self.close_prices: dict[str, float] = close_prices
+        self.pre_closes: dict[str, float] = {}
+        self.start_poses: dict[str, float] = {}
+        self.end_poses: dict[str, float] = {}
 
-        self.contract_results: Dict[str, ContractDailyResult] = {}
+        self.contract_results: dict[str, ContractDailyResult] = {}
 
         for vt_symbol, close_price in close_prices.items():
             self.contract_results[vt_symbol] = ContractDailyResult(result_date, close_price)
@@ -872,11 +872,11 @@ class PortfolioDailyResult:
 
     def calculate_pnl(
         self,
-        pre_closes: Dict[str, float],
-        start_poses: Dict[str, float],
-        sizes: Dict[str, float],
-        rates: Dict[str, float],
-        slippages: Dict[str, float],
+        pre_closes: dict[str, float],
+        start_poses: dict[str, float],
+        sizes: dict[str, float],
+        rates: dict[str, float],
+        slippages: dict[str, float],
     ) -> None:
         """计算盈亏"""
         self.pre_closes = pre_closes
@@ -902,7 +902,7 @@ class PortfolioDailyResult:
 
             self.end_poses[vt_symbol] = contract_result.end_pos
 
-    def update_close_prices(self, close_prices: Dict[str, float]) -> None:
+    def update_close_prices(self, close_prices: dict[str, float]) -> None:
         """更新每日收盘价"""
         self.close_prices.update(close_prices)
 
@@ -920,7 +920,7 @@ def load_bar_data(
     interval: Interval,
     start: datetime,
     end: datetime
-) -> List[BarData]:
+) -> list[BarData]:
     """通过数据库获取历史数据"""
     symbol, exchange = extract_vt_symbol(vt_symbol)
 
@@ -934,13 +934,13 @@ def load_bar_data(
 def evaluate(
     target_name: str,
     strategy_class: StrategyTemplate,
-    vt_symbols: List[str],
+    vt_symbols: list[str],
     interval: Interval,
     start: datetime,
-    rates: Dict[str, float],
-    slippages: Dict[str, float],
-    sizes: Dict[str, float],
-    priceticks: Dict[str, float],
+    rates: dict[str, float],
+    slippages: dict[str, float],
+    sizes: dict[str, float],
+    priceticks: dict[str, float],
     capital: int,
     end: datetime,
     setting: dict

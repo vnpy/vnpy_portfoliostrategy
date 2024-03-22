@@ -4,7 +4,7 @@ import traceback
 from collections import defaultdict
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, List, Set, Tuple, Type, Any, Callable, Optional
+from typing import Type, Callable, Optional
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
@@ -59,17 +59,17 @@ class StrategyEngine(BaseEngine):
         """"""
         super().__init__(main_engine, event_engine, APP_NAME)
 
-        self.strategy_data: Dict[str, Dict] = {}
+        self.strategy_data: dict[str, dict] = {}
 
-        self.classes: Dict[str, Type[StrategyTemplate]] = {}
-        self.strategies: Dict[str, StrategyTemplate] = {}
+        self.classes: dict[str, Type[StrategyTemplate]] = {}
+        self.strategies: dict[str, StrategyTemplate] = {}
 
-        self.symbol_strategy_map: Dict[str, List[StrategyTemplate]] = defaultdict(list)
-        self.orderid_strategy_map: Dict[str, StrategyTemplate] = {}
+        self.symbol_strategy_map: dict[str, list[StrategyTemplate]] = defaultdict(list)
+        self.orderid_strategy_map: dict[str, StrategyTemplate] = {}
 
         self.init_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
 
-        self.vt_tradeids: Set[str] = set()
+        self.vt_tradeids: set[str] = set()
 
         # 数据库和数据服务
         self.database: BaseDatabase = get_database()
@@ -102,7 +102,7 @@ class StrategyEngine(BaseEngine):
 
     def query_bar_from_datafeed(
         self, symbol: str, exchange: Exchange, interval: Interval, start: datetime, end: datetime
-    ) -> List[BarData]:
+    ) -> list[BarData]:
         """通过数据服务获取历史数据"""
         req: HistoryRequest = HistoryRequest(
             symbol=symbol,
@@ -111,7 +111,7 @@ class StrategyEngine(BaseEngine):
             start=start,
             end=end
         )
-        data: List[BarData] = self.datafeed.query_bar_history(req, self.write_log)
+        data: list[BarData] = self.datafeed.query_bar_history(req, self.write_log)
         return data
 
     def process_tick_event(self, event: Event) -> None:
@@ -183,7 +183,7 @@ class StrategyEngine(BaseEngine):
             reference=f"{APP_NAME}_{strategy.strategy_name}"
         )
 
-        req_list: List[OrderRequest] = self.main_engine.convert_order_request(
+        req_list: list[OrderRequest] = self.main_engine.convert_order_request(
             original_req,
             contract.gateway_name,
             lock,
@@ -247,12 +247,12 @@ class StrategyEngine(BaseEngine):
     def load_bars(self, strategy: StrategyTemplate, days: int, interval: Interval) -> None:
         """加载历史数据"""
         vt_symbols: list = strategy.vt_symbols
-        dts: Set[datetime] = set()
-        history_data: Dict[Tuple, BarData] = {}
+        dts: set[datetime] = set()
+        history_data: dict[tuple, BarData] = {}
 
         # 通过接口、数据服务、数据库获取历史数据
         for vt_symbol in vt_symbols:
-            data: List[BarData] = self.load_bar(vt_symbol, days, interval)
+            data: list[BarData] = self.load_bar(vt_symbol, days, interval)
 
             for bar in data:
                 dts.add(bar.datetime)
@@ -288,13 +288,13 @@ class StrategyEngine(BaseEngine):
 
             self.call_strategy_func(strategy, strategy.on_bars, bars)
 
-    def load_bar(self, vt_symbol: str, days: int, interval: Interval) -> List[BarData]:
+    def load_bar(self, vt_symbol: str, days: int, interval: Interval) -> list[BarData]:
         """加载单个合约历史数据"""
         symbol, exchange = extract_vt_symbol(vt_symbol)
         end: datetime = datetime.now(DB_TZ)
         start: datetime = end - timedelta(days)
         contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
-        data: List[BarData]
+        data: list[BarData]
 
         # 通过接口获取历史数据
         if contract and contract.history_data:
@@ -323,9 +323,7 @@ class StrategyEngine(BaseEngine):
 
         return data
 
-    def call_strategy_func(
-        self, strategy: StrategyTemplate, func: Callable, params: Any = None
-    ) -> None:
+    def call_strategy_func(self, strategy: StrategyTemplate, func: Callable, params: object = None) -> None:
         """安全调用策略函数"""
         try:
             if params:
@@ -383,7 +381,7 @@ class StrategyEngine(BaseEngine):
         data: Optional[dict] = self.strategy_data.get(strategy_name, None)
         if data:
             for name in strategy.variables:
-                value: Optional[Any] = data.get(name, None)
+                value: Optional[object] = data.get(name, None)
                 if value is None:
                     continue
 
