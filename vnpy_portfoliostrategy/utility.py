@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Callable, Dict, Optional
+from typing import Callable, Optional
 
 from vnpy.trader.object import BarData, TickData, Interval
 
@@ -20,14 +20,14 @@ class PortfolioBarGenerator:
         self.interval: Interval = interval
         self.interval_count: int = 0
 
-        self.bars: Dict[str, BarData] = {}
-        self.last_ticks: Dict[str, TickData] = {}
+        self.bars: dict[str, BarData] = {}
+        self.last_ticks: dict[str, TickData] = {}
 
-        self.hour_bars: Dict[str, BarData] = {}
-        self.finished_hour_bars: Dict[str, BarData] = {}
+        self.hour_bars: dict[str, BarData] = {}
+        self.finished_hour_bars: dict[str, BarData] = {}
 
         self.window: int = window
-        self.window_bars: Dict[str, BarData] = {}
+        self.window_bars: dict[str, BarData] = {}
         self.on_window_bars: Callable = on_window_bars
 
         self.last_dt: datetime = None
@@ -74,14 +74,14 @@ class PortfolioBarGenerator:
         self.last_ticks[tick.vt_symbol] = tick
         self.last_dt = tick.datetime
 
-    def update_bars(self, bars: Dict[str, BarData]) -> None:
+    def update_bars(self, bars: dict[str, BarData]) -> None:
         """更新一分钟K线"""
         if self.interval == Interval.MINUTE:
             self.update_bar_minute_window(bars)
         else:
             self.update_bar_hour_window(bars)
 
-    def update_bar_minute_window(self, bars: Dict[str, BarData]) -> None:
+    def update_bar_minute_window(self, bars: dict[str, BarData]) -> None:
         """更新N分钟K线"""
         for vt_symbol, bar in bars.items():
             window_bar: Optional[BarData] = self.window_bars.get(vt_symbol, None)
@@ -122,7 +122,7 @@ class PortfolioBarGenerator:
             self.on_window_bars(self.window_bars)
             self.window_bars = {}
 
-    def update_bar_hour_window(self, bars: Dict[str, BarData]) -> None:
+    def update_bar_hour_window(self, bars: dict[str, BarData]) -> None:
         """更新小时K线"""
         for vt_symbol, bar in bars.items():
             hour_bar: Optional[BarData] = self.hour_bars.get(vt_symbol, None)
@@ -206,7 +206,7 @@ class PortfolioBarGenerator:
             self.on_hour_bars(self.finished_hour_bars)
             self.finished_hour_bars = {}
 
-    def on_hour_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_hour_bars(self, bars: dict[str, BarData]) -> None:
         """推送小时K线"""
         if self.window == 1:
             self.on_window_bars(bars)

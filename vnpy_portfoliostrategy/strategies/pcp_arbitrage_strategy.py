@@ -1,4 +1,3 @@
-from typing import List, Dict
 from datetime import datetime
 
 from vnpy.trader.utility import BarGenerator, extract_vt_symbol
@@ -6,12 +5,13 @@ from vnpy.trader.object import TickData, BarData
 from vnpy.trader.constant import Direction
 
 from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
+from vnpy_portfoliostrategy.locale import _
 
 
 class PcpArbitrageStrategy(StrategyTemplate):
     """期权平价套利策略"""
 
-    author = "用Python的交易员"
+    author = _("用Python的交易员")
 
     entry_level = 20
     price_add = 5
@@ -50,13 +50,13 @@ class PcpArbitrageStrategy(StrategyTemplate):
         self,
         strategy_engine: StrategyEngine,
         strategy_name: str,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
-        self.bgs: Dict[str, BarGenerator] = {}
+        self.bgs: dict[str, BarGenerator] = {}
         self.last_tick_time: datetime = None
 
         # 绑定合约代码
@@ -80,17 +80,17 @@ class PcpArbitrageStrategy(StrategyTemplate):
 
     def on_init(self) -> None:
         """策略初始化回调"""
-        self.write_log("策略初始化")
+        self.write_log(_("策略初始化"))
 
         self.load_bars(1)
 
     def on_start(self) -> None:
         """策略启动回调"""
-        self.write_log("策略启动")
+        self.write_log(_("策略启动"))
 
     def on_stop(self) -> None:
         """策略停止回调"""
-        self.write_log("策略停止")
+        self.write_log(_("策略停止"))
 
     def on_tick(self, tick: TickData):
         """行情推送回调"""
@@ -108,7 +108,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
 
         self.last_tick_time = tick.datetime
 
-    def on_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         self.cancel_all()
 

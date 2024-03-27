@@ -1,4 +1,3 @@
-from typing import List, Dict
 from datetime import datetime
 
 from vnpy.trader.utility import ArrayManager
@@ -6,13 +5,14 @@ from vnpy.trader.object import TickData, BarData
 from vnpy.trader.constant import Direction
 
 from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
+from vnpy_portfoliostrategy.locale import _
 from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 
 
 class TrendFollowingStrategy(StrategyTemplate):
     """ATR-RSI趋势跟踪策略"""
 
-    author = "用Python的交易员"
+    author = _("用Python的交易员")
 
     atr_window = 22
     atr_ma_window = 10
@@ -43,22 +43,22 @@ class TrendFollowingStrategy(StrategyTemplate):
         self,
         strategy_engine: StrategyEngine,
         strategy_name: str,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
-        self.rsi_data: Dict[str, float] = {}
-        self.atr_data: Dict[str, float] = {}
-        self.atr_ma: Dict[str, float] = {}
-        self.intra_trade_high: Dict[str, float] = {}
-        self.intra_trade_low: Dict[str, float] = {}
+        self.rsi_data: dict[str, float] = {}
+        self.atr_data: dict[str, float] = {}
+        self.atr_ma: dict[str, float] = {}
+        self.intra_trade_high: dict[str, float] = {}
+        self.intra_trade_low: dict[str, float] = {}
 
         self.last_tick_time: datetime = None
 
         # 创建每个合约的ArrayManager
-        self.ams: Dict[str, ArrayManager] = {}
+        self.ams: dict[str, ArrayManager] = {}
         for vt_symbol in self.vt_symbols:
             self.ams[vt_symbol] = ArrayManager()
 
@@ -66,7 +66,7 @@ class TrendFollowingStrategy(StrategyTemplate):
 
     def on_init(self) -> None:
         """策略初始化回调"""
-        self.write_log("策略初始化")
+        self.write_log(_("策略初始化"))
 
         self.rsi_buy = 50 + self.rsi_entry
         self.rsi_sell = 50 - self.rsi_entry
@@ -75,17 +75,17 @@ class TrendFollowingStrategy(StrategyTemplate):
 
     def on_start(self) -> None:
         """策略启动回调"""
-        self.write_log("策略启动")
+        self.write_log(_("策略启动"))
 
     def on_stop(self) -> None:
         """策略停止回调"""
-        self.write_log("策略停止")
+        self.write_log(_("策略停止"))
 
     def on_tick(self, tick: TickData) -> None:
         """行情推送回调"""
         self.pbg.update_tick(tick)
 
-    def on_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         # 更新K线计算RSI数值
         for vt_symbol, bar in bars.items():

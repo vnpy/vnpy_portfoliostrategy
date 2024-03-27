@@ -1,12 +1,12 @@
 from enum import Enum
-
+from .locale import _
 
 APP_NAME = "PortfolioStrategy"
 
 
 class EngineType(Enum):
-    LIVE = "实盘"
-    BACKTESTING = "回测"
+    LIVE = _("实盘")
+    BACKTESTING = _("回测")
 
 
 EVENT_PORTFOLIO_LOG = "ePortfolioLog"

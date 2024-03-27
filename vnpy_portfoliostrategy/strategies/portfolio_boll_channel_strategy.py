@@ -1,17 +1,17 @@
-from typing import List, Dict
 from datetime import datetime
 
 from vnpy.trader.utility import ArrayManager, Interval
 from vnpy.trader.object import TickData, BarData
 
 from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
+from vnpy_portfoliostrategy.locale import _
 from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 
 
 class PortfolioBollChannelStrategy(StrategyTemplate):
     """组合布林带通道策略"""
 
-    author = "用Python的交易员"
+    author = _("用Python的交易员")
 
     boll_window = 18
     boll_dev = 3.4
@@ -36,24 +36,24 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         self,
         strategy_engine: StrategyEngine,
         strategy_name: str,
-        vt_symbols: List[str],
+        vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
-        self.boll_up: Dict[str, float] = {}
-        self.boll_down: Dict[str, float] = {}
-        self.cci_value: Dict[str, float] = {}
-        self.atr_value: Dict[str, float] = {}
-        self.intra_trade_high: Dict[str, float] = {}
-        self.intra_trade_low: Dict[str, float] = {}
+        self.boll_up: dict[str, float] = {}
+        self.boll_down: dict[str, float] = {}
+        self.cci_value: dict[str, float] = {}
+        self.atr_value: dict[str, float] = {}
+        self.intra_trade_high: dict[str, float] = {}
+        self.intra_trade_low: dict[str, float] = {}
 
-        self.targets: Dict[str, int] = {}
+        self.targets: dict[str, int] = {}
         self.last_tick_time: datetime = None
 
         # 获取合约信息
-        self.ams: Dict[str, ArrayManager] = {}
+        self.ams: dict[str, ArrayManager] = {}
         for vt_symbol in self.vt_symbols:
             self.ams[vt_symbol] = ArrayManager()
             self.targets[vt_symbol] = 0
@@ -62,27 +62,27 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
 
     def on_init(self) -> None:
         """策略初始化回调"""
-        self.write_log("策略初始化")
+        self.write_log(_("策略初始化"))
 
         self.load_bars(10)
 
     def on_start(self) -> None:
         """策略启动回调"""
-        self.write_log("策略启动")
+        self.write_log(_("策略启动"))
 
     def on_stop(self) -> None:
         """策略停止回调"""
-        self.write_log("策略停止")
+        self.write_log(_("策略停止"))
 
     def on_tick(self, tick: TickData) -> None:
         """行情推送回调"""
         self.pbg.update_tick(tick)
 
-    def on_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         self.pbg.update_bars(bars)
 
-    def on_2hour_bars(self, bars: Dict[str, BarData]) -> None:
+    def on_2hour_bars(self, bars: dict[str, BarData]) -> None:
         """2小时K线回调"""
         self.cancel_all()
 
