@@ -12,7 +12,7 @@ from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 class TrendFollowingStrategy(StrategyTemplate):
     """ATR-RSI趋势跟踪策略"""
 
-    author = _("用Python的交易员")
+    author = "用Python的交易员"
 
     atr_window = 22
     atr_ma_window = 10
