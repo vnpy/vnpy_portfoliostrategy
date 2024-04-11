@@ -11,7 +11,7 @@ from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 class PortfolioBollChannelStrategy(StrategyTemplate):
     """组合布林带通道策略"""
 
-    author = _("用Python的交易员")
+    author = "用Python的交易员"
 
     boll_window = 18
     boll_dev = 3.4
