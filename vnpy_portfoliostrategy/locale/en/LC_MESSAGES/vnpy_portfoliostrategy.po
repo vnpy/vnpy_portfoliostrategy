@@ -34,7 +34,7 @@ msgstr "Loading progress: {} [{:.0%}]"
 
 #: vnpy_portfoliostrategy\backtesting.py:197
 msgid "{}历史数据加载完成，数据量：{}"
-msgstr "Historical data loading completed, data volume:{}"
+msgstr "Historical data loading completed, data count: {}"
 
 #: vnpy_portfoliostrategy\backtesting.py:199
 msgid "所有历史数据加载完成"
@@ -79,23 +79,23 @@ msgstr "There was a liquidation during the backtest (the funds were less than or
 
 #: vnpy_portfoliostrategy\backtesting.py:390
 msgid "首个交易日：\t{}"
-msgstr "Start date: \t{}"
+msgstr "Start Date: \t{}"
 
 #: vnpy_portfoliostrategy\backtesting.py:391
 msgid "最后交易日：\t{}"
-msgstr "End date: \t{}"
+msgstr "End Date: \t{}"
 
 #: vnpy_portfoliostrategy\backtesting.py:393
 msgid "总交易日：\t{}"
-msgstr "Total days: \t{}"
+msgstr "Total Days: \t{}"
 
 #: vnpy_portfoliostrategy\backtesting.py:394
 msgid "盈利交易日：\t{}"
-msgstr "Profit days: \t{}"
+msgstr "Profit Days: \t{}"
 
 #: vnpy_portfoliostrategy\backtesting.py:395
 msgid "亏损交易日：\t{}"
-msgstr "Loss days: \t{}"
+msgstr "Loss Days: \t{}"
 
 #: vnpy_portfoliostrategy\backtesting.py:397
 msgid "起始资金：\t{:,.2f}"
@@ -103,79 +103,79 @@ msgstr "Capital: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:398
 msgid "结束资金：\t{:,.2f}"
-msgstr "End balance: \t{:,.2f}"
+msgstr "End Balance: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:400
 msgid "总收益率：\t{:,.2f}%"
-msgstr "Total return: \t{:,.2f}%"
+msgstr "Total Return: \t{:,.2f}%"
 
 #: vnpy_portfoliostrategy\backtesting.py:401
 msgid "年化收益：\t{:,.2f}%"
-msgstr "Annual return: \t{:,.2f}%"
+msgstr "Annual Return: \t{:,.2f}%"
 
 #: vnpy_portfoliostrategy\backtesting.py:402
 msgid "最大回撤: \t{:,.2f}"
-msgstr "Max drawdown: \t{:,.2f}"
+msgstr "Max Drawdown: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:403
 msgid "百分比最大回撤: {:,.2f}%"
-msgstr "Max ddpercent: {:,.2f}%"
+msgstr "Max Ddpercent: {:,.2f}%"
 
 #: vnpy_portfoliostrategy\backtesting.py:404
 msgid "最长回撤天数: \t{}"
-msgstr "Max drawdown duration: \t{}"
+msgstr "Max Drawdown Duration: \t{}"
 
 #: vnpy_portfoliostrategy\backtesting.py:406
 msgid "总盈亏：\t{:,.2f}"
-msgstr "Total net pnl: \t{:,.2f}"
+msgstr "Total Net P&L: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:407
 msgid "总手续费：\t{:,.2f}"
-msgstr "Total commission: \t{:,.2f}"
+msgstr "Total Commission: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:408
 msgid "总滑点：\t{:,.2f}"
-msgstr "Total slippage: \t{:,.2f}"
+msgstr "Total Slippage: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:409
 msgid "总成交金额：\t{:,.2f}"
-msgstr "Total turnover: \t{:,.2f}"
+msgstr "Total Turnover: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:410
 msgid "总成交笔数：\t{}"
-msgstr "Total trade count: \t{}"
+msgstr "Total Trade Count: \t{}"
 
 #: vnpy_portfoliostrategy\backtesting.py:412
 msgid "日均盈亏：\t{:,.2f}"
-msgstr "Daily net pnl: \t{:,.2f}"
+msgstr "Daily Net P&L: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:413
 msgid "日均手续费：\t{:,.2f}"
-msgstr "Daily commission: \t{:,.2f}"
+msgstr "Daily Commission: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:414
 msgid "日均滑点：\t{:,.2f}"
-msgstr "Daily slippage: \t{:,.2f}"
+msgstr "Daily Slippage: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:415
 msgid "日均成交金额：\t{:,.2f}"
-msgstr "Daily turnover: \t{:,.2f}"
+msgstr "Daily Turnover: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:416
 msgid "日均成交笔数：\t{}"
-msgstr "Daily trade count: \t{}"
+msgstr "Daily Trade Count: \t{}"
 
 #: vnpy_portfoliostrategy\backtesting.py:418
 msgid "日均收益率：\t{:,.2f}%"
-msgstr "Daily return: \t{:,.2f}%"
+msgstr "Daily Return: \t{:,.2f}%"
 
 #: vnpy_portfoliostrategy\backtesting.py:419
 msgid "收益标准差：\t{:,.2f}%"
-msgstr "Return std: \t{:,.2f}%"
+msgstr "Return Std: \t{:,.2f}%"
 
 #: vnpy_portfoliostrategy\backtesting.py:421
 msgid "收益回撤比：\t{:,.2f}"
-msgstr "Return drawdown ratio: \t{:,.2f}"
+msgstr "Return Drawdown Ratio: \t{:,.2f}"
 
 #: vnpy_portfoliostrategy\backtesting.py:458
 msgid "策略统计指标计算完成"
