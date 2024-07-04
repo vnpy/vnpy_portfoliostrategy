@@ -7,6 +7,7 @@ from vnpy.trader.object import TickData, BarData
 from vnpy.trader.constant import Direction
 
 from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
+from vnpy_portfoliostrategy.locale import _
 
 
 class PairTradingStrategy(StrategyTemplate):
@@ -73,17 +74,17 @@ class PairTradingStrategy(StrategyTemplate):
 
     def on_init(self) -> None:
         """策略初始化回调"""
-        self.write_log("策略初始化")
+        self.write_log(_("策略初始化"))
 
         self.load_bars(1)
 
     def on_start(self) -> None:
         """策略启动回调"""
-        self.write_log("策略启动")
+        self.write_log(_("策略启动"))
 
     def on_stop(self) -> None:
         """策略停止回调"""
-        self.write_log("策略停止")
+        self.write_log(_("策略停止"))
 
     def on_tick(self, tick: TickData) -> None:
         """行情推送回调"""
