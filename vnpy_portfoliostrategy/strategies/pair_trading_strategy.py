@@ -13,7 +13,7 @@ from vnpy_portfoliostrategy.locale import _
 class PairTradingStrategy(StrategyTemplate):
     """配对交易策略"""
 
-    author = _("用Python的交易员")
+    author = "用Python的交易员"
 
     tick_add = 1
     boll_window = 20

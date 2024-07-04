@@ -11,7 +11,7 @@ from vnpy_portfoliostrategy.locale import _
 class PcpArbitrageStrategy(StrategyTemplate):
     """期权平价套利策略"""
 
-    author = _("用Python的交易员")
+    author = "用Python的交易员"
 
     entry_level = 20
     price_add = 5
