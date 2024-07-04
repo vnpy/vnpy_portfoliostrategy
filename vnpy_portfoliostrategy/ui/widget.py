@@ -14,6 +14,7 @@ from ..base import (
 from ..engine import StrategyEngine
 from ..locale import _
 
+
 class PortfolioStrategyManager(QtWidgets.QWidget):
     """组合策略界面"""
 
