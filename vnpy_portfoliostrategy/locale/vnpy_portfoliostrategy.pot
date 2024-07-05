@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2024-04-10 17:09+0800\n"
+"POT-Creation-Date: 2024-07-04 15:22+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,7 +16,7 @@ msgstr ""
 
 
 #: vnpy_portfoliostrategy\__init__.py:50
-#: vnpy_portfoliostrategy\ui\widget.py:40
+#: vnpy_portfoliostrategy\ui\widget.py:41
 msgid "组合策略"
 msgstr ""
 
@@ -258,88 +258,67 @@ msgstr ""
 msgid "组合策略引擎"
 msgstr ""
 
-#: vnpy_portfoliostrategy\strategies\pair_trading_strategy.py:77
-#: vnpy_portfoliostrategy\strategies\pcp_arbitrage_strategy.py:83
-#: vnpy_portfoliostrategy\strategies\portfolio_boll_channel_strategy.py:65
-#: vnpy_portfoliostrategy\strategies\trend_following_strategy.py:69
-msgid "策略初始化"
-msgstr ""
-
-#: vnpy_portfoliostrategy\strategies\pair_trading_strategy.py:83
-#: vnpy_portfoliostrategy\strategies\pcp_arbitrage_strategy.py:89
-#: vnpy_portfoliostrategy\strategies\portfolio_boll_channel_strategy.py:71
-#: vnpy_portfoliostrategy\strategies\trend_following_strategy.py:78
-msgid "策略启动"
-msgstr ""
-
-#: vnpy_portfoliostrategy\strategies\pair_trading_strategy.py:87
-#: vnpy_portfoliostrategy\strategies\pcp_arbitrage_strategy.py:93
-#: vnpy_portfoliostrategy\strategies\portfolio_boll_channel_strategy.py:75
-#: vnpy_portfoliostrategy\strategies\trend_following_strategy.py:82
-msgid "策略停止"
-msgstr ""
-
-#: vnpy_portfoliostrategy\ui\widget.py:45
+#: vnpy_portfoliostrategy\ui\widget.py:46
 msgid "添加策略"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:48
+#: vnpy_portfoliostrategy\ui\widget.py:49
 msgid "全部初始化"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:51
+#: vnpy_portfoliostrategy\ui\widget.py:52
 msgid "全部启动"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:54
+#: vnpy_portfoliostrategy\ui\widget.py:55
 msgid "全部停止"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:57
+#: vnpy_portfoliostrategy\ui\widget.py:58
 msgid "清空日志"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:177
+#: vnpy_portfoliostrategy\ui\widget.py:178
 msgid "初始化"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:180
+#: vnpy_portfoliostrategy\ui\widget.py:181
 msgid "启动"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:184
+#: vnpy_portfoliostrategy\ui\widget.py:185
 msgid "停止"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:188
+#: vnpy_portfoliostrategy\ui\widget.py:189
 msgid "编辑"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:191
+#: vnpy_portfoliostrategy\ui\widget.py:192
 msgid "移除"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:330
+#: vnpy_portfoliostrategy\ui\widget.py:331
 msgid "时间"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:331
+#: vnpy_portfoliostrategy\ui\widget.py:332
 msgid "信息"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:370
+#: vnpy_portfoliostrategy\ui\widget.py:371
 msgid "添加策略：{}"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:371
+#: vnpy_portfoliostrategy\ui\widget.py:372
 msgid "添加"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:375
+#: vnpy_portfoliostrategy\ui\widget.py:376
 msgid "参数编辑：{}"
 msgstr ""
 
-#: vnpy_portfoliostrategy\ui\widget.py:376
+#: vnpy_portfoliostrategy\ui\widget.py:377
 msgid "确定"
 msgstr ""
 
