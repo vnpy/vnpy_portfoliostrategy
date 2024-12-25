@@ -804,11 +804,8 @@ class ContractDailyResult:
         slippage: float
     ) -> None:
         """计算盈亏"""
-        # 如果没有昨收盘价，用1代替。避免除法运算报错
-        if pre_close:
-            self.pre_close = pre_close
-        else:
-            self.pre_close = 1
+        # 记录昨收盘价
+        self.pre_close = pre_close
 
         # 计算持仓盈亏
         self.start_pos = start_pos
