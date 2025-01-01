@@ -308,3 +308,7 @@ class StrategyTemplate(ABC):
         """同步策略状态数据到文件"""
         if self.trading:
             self.strategy_engine.sync_strategy_data(self)
+
+    def get_available_capital(self) -> float:
+        """获取可用资金"""
+        return self.strategy_engine.available_capital

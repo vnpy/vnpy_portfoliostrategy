@@ -8,7 +8,8 @@ import traceback
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from pandas import DataFrame
+from pandas import DataFrame, Series
+import exchange_calendars as xcals
 
 from vnpy.trader.constant import Direction, Offset, Interval, Status
 from vnpy.trader.database import get_database, BaseDatabase
@@ -31,6 +32,10 @@ INTERVAL_DELTA_MAP: dict[Interval, timedelta] = {
     Interval.HOUR: timedelta(hours=1),
     Interval.DAILY: timedelta(days=1),
 }
+
+
+# 获取上交所交易日历
+calendar: xcals.ExchangeCalendar = xcals.get_calendar("XSHG")
 
 
 class BacktestingEngine:
@@ -75,6 +80,13 @@ class BacktestingEngine:
 
         self.daily_results: dict[date, PortfolioDailyResult] = {}
         self.daily_df: DataFrame = None
+
+        # GC逆回购相关
+        self.available_capital: float = 0
+        self.repo_positions: dict[str, RepoPosition] = {}
+
+        self.balance_data: dict[date, float] = {}
+        self.repo_position_data: list[RepoPosition] = []
 
     def clear_data(self) -> None:
         """清理上次回测缓存数据"""
@@ -121,6 +133,9 @@ class BacktestingEngine:
         self.capital = capital
         self.risk_free = risk_free
         self.annual_days = annual_days
+
+        # GC逆回购相关
+        self.available_capital = capital
 
     def add_strategy(self, strategy_class: type, setting: dict) -> None:
         """增加策略"""
@@ -325,7 +340,10 @@ class BacktestingEngine:
 
         # 计算资金相关指标
         if df is not None:
-            df["balance"] = df["net_pnl"].cumsum() + self.capital
+            # df["balance"] = df["net_pnl"].cumsum() + self.capital
+            balance_series: Series = Series(data=self.balance_data.values(), index=self.balance_data.keys())
+            df["balance"] = balance_series
+
             df["return"] = np.log(df["balance"] / df["balance"].shift(1)).fillna(0)
             df["highlevel"] = df["balance"].rolling(min_periods=1, window=len(df), center=False).max()
             df["drawdown"] = df["balance"] - df["highlevel"]
@@ -573,6 +591,24 @@ class BacktestingEngine:
         """历史数据推送"""
         self.datetime = dt
 
+        # 检查回购到期
+        check_dt: datetime = dt.replace(hour=0, minute=0, second=0, tzinfo=None)
+
+        for vt_tradeid, repo_position in list(self.repo_positions.items()):
+            # 如果回购到期
+            if check_dt >= repo_position.end:
+                # 计算利息
+                interest: float = repo_position.get_interest()
+
+                # 更新可用资金
+                self.available_capital += (repo_position.volume + interest)
+
+                # 移除回购持仓
+                self.repo_positions.pop(vt_tradeid)
+
+                # 记录回购持仓
+                self.repo_position_data.append(repo_position)
+
         bars: dict[str, BarData] = {}
         for vt_symbol in self.vt_symbols:
             bar: Optional[BarData] = self.history_data.get((dt, vt_symbol), None)
@@ -604,6 +640,13 @@ class BacktestingEngine:
 
         if self.strategy.inited:
             self.update_daily_close(self.bars, dt)
+
+        # 记录账户市值变化
+        repo_value: float = 0
+        for repo_position in self.repo_positions.values():      # 尚未到期的回购价值
+            repo_value += repo_position.volume
+
+        self.balance_data[dt.date()] = self.available_capital + repo_value
 
     def cross_limit_order(self) -> None:
         """撮合限价委托"""
@@ -668,6 +711,18 @@ class BacktestingEngine:
             self.strategy.update_trade(trade)
             self.trades[trade.vt_tradeid] = trade
 
+            # 缓存该笔逆回购持仓
+            repo_position: RepoPosition = RepoPosition(
+                vt_symbol=trade.vt_symbol,
+                price=trade.price,
+                volume=trade.volume,
+                start=self.datetime.replace(hour=0, minute=0, second=0, tzinfo=None)
+            )
+            self.repo_positions[trade.vt_tradeid] = repo_position
+
+            # 更新可用资金
+            self.available_capital -= trade.volume
+
     def load_bars(
         self,
         strategy: StrategyTemplate,
@@ -689,6 +744,14 @@ class BacktestingEngine:
         net: bool
     ) -> list[str]:
         """发送委托"""
+        # 回购只允许卖出
+        if direction != Direction.SHORT:
+            return []
+
+        # 检查资金是否足够回购
+        if self.available_capital < volume:
+            return []
+
         price: float = round_to(price, self.priceticks[vt_symbol])
         symbol, exchange = extract_vt_symbol(vt_symbol)
 
@@ -992,3 +1055,31 @@ def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> callable:
 def get_target_value(result: list) -> float:
     """获取优化目标"""
     return result[1]
+
+
+class RepoPosition:
+    """逆回购持仓"""
+
+    def __init__(
+        self,
+        vt_symbol: str,
+        price: float,
+        volume: float,
+        start: datetime
+    ) -> None:
+        """初始化逆回购持仓"""
+        self.vt_symbol: str = vt_symbol
+        self.price: float = price
+        self.volume: float = volume
+        self.start: datetime = start
+        self.end: datetime = calendar.date_to_session(start + timedelta(days=1), "next").to_pydatetime()
+
+        self.days: int = (self.end - self.start).days
+
+    def get_interest(self) -> float:
+        """获取利息"""
+        interest: float = self.volume * (self.price / 100) * (self.days / 365)
+        return interest
+
+    def __str__(self) -> str:
+        return f"RepoPosition: {self.vt_symbol} | {self.start} ~ {self.end} | {self.volume}@{self.price} | {self.get_interest()}"
