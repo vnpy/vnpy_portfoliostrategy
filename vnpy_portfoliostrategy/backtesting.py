@@ -174,7 +174,7 @@ class BacktestingEngine:
                     progress += progress_delta / total_delta
                     progress = min(progress, 1)
                     progress_bar = "#" * int(progress * 10)
-                    self.output(_("{}加载进度：{} [{:.0%}]").format(
+                    self.output(_(" {}加载进度：{} [{:.0%}]").format(
                         vt_symbol, progress_bar, progress
                     ))
 
