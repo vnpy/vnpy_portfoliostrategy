@@ -50,10 +50,10 @@ class BacktestingEngine:
         self.start: datetime = None
         self.end: datetime = None
 
-        self.rates: dict[str, float] = 0
-        self.slippages: dict[str, float] = 0
-        self.sizes: dict[str, float] = 1
-        self.priceticks: dict[str, float] = 0
+        self.rates: dict[str, float] = {}
+        self.slippages: dict[str, float] = {}
+        self.sizes: dict[str, float] = {}
+        self.priceticks: dict[str, float] = {}
 
         self.capital: float = 1_000_000
         self.risk_free: float = 0
@@ -232,8 +232,8 @@ class BacktestingEngine:
 
             try:
                 self.new_bars(dt)
-            except Exception:
-                self.output(_("触发异常，回测终止"))
+            except Exception as e:
+                self.output(_(f"触发异常，回测终止: {e}"))
                 self.output(traceback.format_exc())
                 return
 
@@ -248,8 +248,8 @@ class BacktestingEngine:
         for dt in dts[ix:]:
             try:
                 self.new_bars(dt)
-            except Exception:
-                self.output(_("触发异常，回测终止"))
+            except Exception as e:
+                self.output(_(f"触发异常，回测终止: {e}"))
                 self.output(traceback.format_exc())
                 return
 
@@ -387,7 +387,7 @@ class BacktestingEngine:
             daily_turnover: float = total_turnover / total_days
 
             total_trade_count: int = df["trade_count"].sum()
-            daily_trade_count: int = total_trade_count / total_days
+            daily_trade_count: float = total_trade_count / total_days
 
             total_return: float = (end_balance / self.capital - 1) * 100
             annual_return: float = total_return / total_days * self.annual_days
@@ -400,7 +400,10 @@ class BacktestingEngine:
             else:
                 sharpe_ratio: float = 0
 
-            return_drawdown_ratio: float = -total_net_pnl / max_drawdown
+            if max_drawdown != 0:
+                return_drawdown_ratio = -total_net_pnl / max_drawdown
+            else:
+                return_drawdown_ratio = 0
 
         # 输出结果
         if output:
@@ -591,24 +594,6 @@ class BacktestingEngine:
         """历史数据推送"""
         self.datetime = dt
 
-        # 检查回购到期
-        check_dt: datetime = dt.replace(hour=0, minute=0, second=0, tzinfo=None)
-
-        for vt_tradeid, repo_position in list(self.repo_positions.items()):
-            # 如果回购到期
-            if check_dt >= repo_position.end:
-                # 计算利息
-                interest: float = repo_position.get_interest()
-
-                # 更新可用资金
-                self.available_capital += (repo_position.volume + interest)
-
-                # 移除回购持仓
-                self.repo_positions.pop(vt_tradeid)
-
-                # 记录回购持仓
-                self.repo_position_data.append(repo_position)
-
         bars: dict[str, BarData] = {}
         for vt_symbol in self.vt_symbols:
             bar: Optional[BarData] = self.history_data.get((dt, vt_symbol), None)
@@ -635,7 +620,40 @@ class BacktestingEngine:
                 )
                 self.bars[vt_symbol] = bar
 
+        # 执行在T-1 Bar发起的交易
         self.cross_limit_order()
+
+        # 检查回购到期
+        # 对于日线，如果回购在T+1日到期，则需要在T日计算收益，更新T+1日的可用资金，移除回购持仓。
+        # 对于tick线，分钟线和小时线，如果当前Bar在回购的到期日，则需要在当前bar计算收益，更新当前bar的可用资金，移除回购持仓。
+
+        check_dt: datetime = dt.replace(hour=0, minute=0, second=0, tzinfo=None)
+
+        for vt_tradeid, repo_position in list(self.repo_positions.items()):
+
+            one_day_before_repo_end = calendar.previous_session(repo_position.end)
+
+            if bar.interval == Interval.DAILY:
+                release_repo: bool = (check_dt >= one_day_before_repo_end)
+            elif bar.interval == Interval.TICK or bar.interval == Interval.MINUTE or bar.interval == Interval.HOUR:
+                release_repo: bool = (check_dt >= repo_position.end)
+            else:
+                raise NotImplementedError(f"Unexpected interval: {bar.interval}, should be DAILY, MINUTE or HOUR")
+
+            if release_repo:
+                # 计算利息
+                interest: float = repo_position.get_interest()
+
+                # 更新可用资金
+                self.available_capital += (repo_position.volume + interest)
+
+                # 移除回购持仓
+                self.repo_positions.pop(vt_tradeid)
+
+                # 记录回购持仓
+                self.repo_position_data.append(repo_position)
+
+        # 发起将在T+1 Bar执行的交易
         self.strategy.on_bars(bars)
 
         if self.strategy.inited:
@@ -862,7 +880,7 @@ class ContractDailyResult:
         self,
         pre_close: float,
         start_pos: float,
-        size: int,
+        size: float,
         rate: float,
         slippage: float
     ) -> None:
@@ -1030,7 +1048,7 @@ def evaluate(
     statistics: dict = engine.calculate_statistics(output=False)
 
     target_value: float = statistics[target_name]
-    return (str(setting), target_value, statistics)
+    return str(setting), target_value, statistics
 
 
 def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> callable:
