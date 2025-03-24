@@ -38,6 +38,16 @@ INTERVAL_DELTA_MAP: dict[Interval, timedelta] = {
 calendar: xcals.ExchangeCalendar = xcals.get_calendar("XSHG")
 
 
+# 回购代码和天数映射
+REPO_DAYS_MAP: dict[str, int] = {
+    "204001.SSE": 1,
+    "204002.SSE": 2,
+    "204003.SSE": 3,
+    "204004.SSE": 4,
+    "204007.SSE": 7,
+}
+
+
 class BacktestingEngine:
     """组合策略回测引擎"""
 
@@ -734,7 +744,8 @@ class BacktestingEngine:
                 vt_symbol=trade.vt_symbol,
                 price=trade.price,
                 volume=trade.volume,
-                start=self.datetime.replace(hour=0, minute=0, second=0, tzinfo=None)
+                start=self.datetime.replace(hour=0, minute=0, second=0, tzinfo=None),
+                days=REPO_DAYS_MAP[trade.vt_symbol]
             )
             self.repo_positions[trade.vt_tradeid] = repo_position
 
@@ -1083,14 +1094,15 @@ class RepoPosition:
         vt_symbol: str,
         price: float,
         volume: float,
-        start: datetime
+        start: datetime,
+        days: int
     ) -> None:
         """初始化逆回购持仓"""
         self.vt_symbol: str = vt_symbol
         self.price: float = price
         self.volume: float = volume
         self.start: datetime = start
-        self.end: datetime = calendar.date_to_session(start + timedelta(days=1), "next").to_pydatetime()
+        self.end: datetime = calendar.date_to_session(start + timedelta(days=days), "next").to_pydatetime()
 
         self.days: int = (self.end - self.start).days
 
