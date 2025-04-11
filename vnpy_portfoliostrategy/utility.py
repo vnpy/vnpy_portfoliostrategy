@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from vnpy.trader.object import BarData, TickData, Interval
 
@@ -44,7 +44,7 @@ class PortfolioBarGenerator:
             self.on_bars(self.bars)
             self.bars = {}
 
-        bar: Optional[BarData] = self.bars.get(tick.vt_symbol, None)
+        bar: BarData | None = self.bars.get(tick.vt_symbol, None)
         if not bar:
             bar = BarData(
                 symbol=tick.symbol,
@@ -66,7 +66,7 @@ class PortfolioBarGenerator:
             bar.open_interest = tick.open_interest
             bar.datetime = tick.datetime
 
-        last_tick: Optional[TickData] = self.last_ticks.get(tick.vt_symbol, None)
+        last_tick: TickData | None = self.last_ticks.get(tick.vt_symbol, None)
         if last_tick:
             bar.volume += max(tick.volume - last_tick.volume, 0)
             bar.turnover += max(tick.turnover - last_tick.turnover, 0)
@@ -84,7 +84,7 @@ class PortfolioBarGenerator:
     def update_bar_minute_window(self, bars: dict[str, BarData]) -> None:
         """更新N分钟K线"""
         for vt_symbol, bar in bars.items():
-            window_bar: Optional[BarData] = self.window_bars.get(vt_symbol, None)
+            window_bar: BarData | None = self.window_bars.get(vt_symbol, None)
 
             # 如果没有N分钟K线则创建
             if not window_bar:
@@ -125,7 +125,7 @@ class PortfolioBarGenerator:
     def update_bar_hour_window(self, bars: dict[str, BarData]) -> None:
         """更新小时K线"""
         for vt_symbol, bar in bars.items():
-            hour_bar: Optional[BarData] = self.hour_bars.get(vt_symbol, None)
+            hour_bar: BarData | None = self.hour_bars.get(vt_symbol, None)
 
             # 如果没有小时K线则创建
             if not hour_bar:
@@ -212,7 +212,7 @@ class PortfolioBarGenerator:
             self.on_window_bars(bars)
         else:
             for vt_symbol, bar in bars.items():
-                window_bar: Optional[BarData] = self.window_bars.get(vt_symbol, None)
+                window_bar: BarData | None = self.window_bars.get(vt_symbol, None)
                 if not window_bar:
                     window_bar = BarData(
                         symbol=bar.symbol,

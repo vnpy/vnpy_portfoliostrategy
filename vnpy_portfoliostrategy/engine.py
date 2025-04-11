@@ -4,7 +4,7 @@ import traceback
 from collections import defaultdict
 from pathlib import Path
 from types import ModuleType
-from typing import Type, Callable, Optional
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
@@ -62,7 +62,7 @@ class StrategyEngine(BaseEngine):
 
         self.strategy_data: dict[str, dict] = {}
 
-        self.classes: dict[str, Type[StrategyTemplate]] = {}
+        self.classes: dict[str, type[StrategyTemplate]] = {}
         self.strategies: dict[str, StrategyTemplate] = {}
 
         self.symbol_strategy_map: dict[str, list[StrategyTemplate]] = defaultdict(list)
@@ -131,7 +131,7 @@ class StrategyEngine(BaseEngine):
         """委托数据推送"""
         order: OrderData = event.data
 
-        strategy: Optional[StrategyTemplate] = self.orderid_strategy_map.get(order.vt_orderid, None)
+        strategy: StrategyTemplate | None = self.orderid_strategy_map.get(order.vt_orderid, None)
         if not strategy:
             return
 
@@ -147,7 +147,7 @@ class StrategyEngine(BaseEngine):
         self.vt_tradeids.add(trade.vt_tradeid)
 
         # 推送给策略
-        strategy: Optional[StrategyTemplate] = self.orderid_strategy_map.get(trade.vt_orderid, None)
+        strategy: StrategyTemplate | None = self.orderid_strategy_map.get(trade.vt_orderid, None)
         if not strategy:
             return
 
@@ -165,7 +165,7 @@ class StrategyEngine(BaseEngine):
         net: bool,
     ) -> list:
         """发送委托"""
-        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+        contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
         if not contract:
             self.write_log(_("委托失败，找不到合约：{}").format(vt_symbol), strategy)
             return ""
@@ -210,7 +210,7 @@ class StrategyEngine(BaseEngine):
 
     def cancel_order(self, strategy: StrategyTemplate, vt_orderid: str) -> None:
         """委托撤单"""
-        order: Optional[OrderData] = self.main_engine.get_order(vt_orderid)
+        order: OrderData | None = self.main_engine.get_order(vt_orderid)
         if not order:
             self.write_log(f"撤单失败，找不到委托{vt_orderid}", strategy)
             return
@@ -229,7 +229,7 @@ class StrategyEngine(BaseEngine):
 
     def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
         """获取合约价格跳动"""
-        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+        contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
 
         if contract:
             return contract.pricetick
@@ -238,7 +238,7 @@ class StrategyEngine(BaseEngine):
 
     def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> int:
         """获取合约乘数"""
-        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+        contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
 
         if contract:
             return contract.size
@@ -266,7 +266,7 @@ class StrategyEngine(BaseEngine):
 
         for dt in dts:
             for vt_symbol in vt_symbols:
-                bar: Optional[BarData] = history_data.get((dt, vt_symbol), None)
+                bar: BarData | None = history_data.get((dt, vt_symbol), None)
 
                 # 如果获取到合约指定时间的历史数据，缓存进bars字典
                 if bar:
@@ -294,7 +294,7 @@ class StrategyEngine(BaseEngine):
         symbol, exchange = extract_vt_symbol(vt_symbol)
         end: datetime = datetime.now(DB_TZ)
         start: datetime = end - timedelta(days)
-        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+        contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
         data: list[BarData]
 
         # 通过接口获取历史数据
@@ -346,7 +346,7 @@ class StrategyEngine(BaseEngine):
             self.write_log(_("创建策略失败，存在重名{}").format(strategy_name))
             return
 
-        strategy_class: Optional[StrategyTemplate] = self.classes.get(class_name, None)
+        strategy_class: StrategyTemplate | None = self.classes.get(class_name, None)
         if not strategy_class:
             self.write_log(_("创建策略失败，找不到策略类{}").format(class_name))
             return
@@ -379,10 +379,10 @@ class StrategyEngine(BaseEngine):
         self.call_strategy_func(strategy, strategy.on_init)
 
         # 恢复策略状态
-        data: Optional[dict] = self.strategy_data.get(strategy_name, None)
+        data: dict | None = self.strategy_data.get(strategy_name, None)
         if data:
             for name in strategy.variables:
-                value: Optional[object] = data.get(name, None)
+                value: object | None = data.get(name, None)
                 if value is None:
                     continue
 
@@ -396,7 +396,7 @@ class StrategyEngine(BaseEngine):
 
         # 订阅行情
         for vt_symbol in strategy.vt_symbols:
-            contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+            contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
             if contract:
                 req: SubscribeRequest = SubscribeRequest(
                     symbol=contract.symbol, exchange=contract.exchange)

@@ -1,11 +1,10 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from copy import copy
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from collections import defaultdict
 
 from vnpy.trader.constant import Interval, Direction, Offset
 from vnpy.trader.object import BarData, TickData, OrderData, TradeData
-from vnpy.trader.utility import virtual
 
 from .base import EngineType
 
@@ -28,7 +27,7 @@ class StrategyTemplate(ABC):
         setting: dict
     ) -> None:
         """构造函数"""
-        self.strategy_engine: "StrategyEngine" = strategy_engine
+        self.strategy_engine: StrategyEngine = strategy_engine
         self.strategy_name: str = strategy_name
         self.vt_symbols: list[str] = vt_symbols
 
@@ -94,30 +93,27 @@ class StrategyTemplate(ABC):
         }
         return strategy_data
 
-    @virtual
+    @abstractmethod
     def on_init(self) -> None:
         """策略初始化回调"""
-        pass
+        return
 
-    @virtual
     def on_start(self) -> None:
         """策略启动回调"""
-        pass
+        return
 
-    @virtual
     def on_stop(self) -> None:
         """策略停止回调"""
-        pass
+        return
 
-    @virtual
     def on_tick(self, tick: TickData) -> None:
         """行情推送回调"""
-        pass
+        return
 
-    @virtual
+    @abstractmethod
     def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
-        pass
+        return
 
     def update_trade(self, trade: TradeData) -> None:
         """成交数据更新"""
@@ -256,7 +252,6 @@ class StrategyTemplate(ABC):
                 if short_volume:
                     self.short(vt_symbol, order_price, short_volume)
 
-    @virtual
     def calculate_price(
         self,
         vt_symbol: str,
@@ -266,7 +261,7 @@ class StrategyTemplate(ABC):
         """计算调仓委托价格（支持按需重载实现）"""
         return reference
 
-    def get_order(self, vt_orderid: str) -> Optional[OrderData]:
+    def get_order(self, vt_orderid: str) -> OrderData | None:
         """查询委托数据"""
         return self.orders.get(vt_orderid, None)
 

@@ -1,6 +1,5 @@
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from typing import Optional
 from functools import lru_cache, partial
 from copy import copy
 import traceback
@@ -207,9 +206,9 @@ class BacktestingEngine:
 
         # 使用指定时间的历史数据初始化策略
         day_count: int = 0
-        ix: int = 0
+        _ix: int = 0
 
-        for ix, dt in enumerate(dts):
+        for _ix, dt in enumerate(dts):
             if self.datetime and dt.day != self.datetime.day:
                 day_count += 1
                 if day_count >= self.days:
@@ -230,7 +229,7 @@ class BacktestingEngine:
         self.output(_("开始回放历史数据"))
 
         # 使用剩余历史数据进行策略回测
-        for dt in dts[ix:]:
+        for dt in dts[_ix:]:
             try:
                 self.new_bars(dt)
             except Exception:
@@ -562,7 +561,7 @@ class BacktestingEngine:
         for bar in bars.values():
             close_prices[bar.vt_symbol] = bar.close_price
 
-        daily_result: Optional[PortfolioDailyResult] = self.daily_results.get(d, None)
+        daily_result: PortfolioDailyResult | None = self.daily_results.get(d, None)
 
         if daily_result:
             daily_result.update_close_prices(close_prices)
@@ -575,7 +574,7 @@ class BacktestingEngine:
 
         bars: dict[str, BarData] = {}
         for vt_symbol in self.vt_symbols:
-            bar: Optional[BarData] = self.history_data.get((dt, vt_symbol), None)
+            bar: BarData | None = self.history_data.get((dt, vt_symbol), None)
 
             # 判断是否获取到该合约指定时间的历史数据
             if bar:
@@ -907,7 +906,7 @@ class PortfolioDailyResult:
         self.close_prices.update(close_prices)
 
         for vt_symbol, close_price in close_prices.items():
-            contract_result: Optional[ContractDailyResult] = self.contract_results.get(vt_symbol, None)
+            contract_result: ContractDailyResult | None = self.contract_results.get(vt_symbol, None)
             if contract_result:
                 contract_result.update_close_price(close_price)
             else:

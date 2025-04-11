@@ -284,7 +284,7 @@ class DataMonitor(QtWidgets.QTableWidget):
 
     def __init__(self, data: dict) -> None:
         """构造函数"""
-        super(DataMonitor, self).__init__()
+        super().__init__()
 
         self._data: dict = data
         self.cells: dict = {}
@@ -334,7 +334,7 @@ class LogMonitor(BaseMonitor):
 
     def init_ui(self) -> None:
         """初始化界面"""
-        super(LogMonitor, self).init_ui()
+        super().init_ui()
 
         self.horizontalHeader().setSectionResizeMode(
             1, QtWidgets.QHeaderView.ResizeMode.Stretch
@@ -353,7 +353,7 @@ class SettingEditor(QtWidgets.QDialog):
         self, parameters: dict, strategy_name: str = "", class_name: str = ""
     ) -> None:
         """构造函数"""
-        super(SettingEditor, self).__init__()
+        super().__init__()
 
         self.parameters: dict = parameters
         self.strategy_name: str = strategy_name
@@ -409,7 +409,7 @@ class SettingEditor(QtWidgets.QDialog):
             edit, type_ = tp
             value_text = edit.text()
 
-            if type_ == bool:
+            if type_ is bool:
                 if value_text == "True":
                     value: bool = True
                 else:
