@@ -56,15 +56,15 @@ class PairTradingStrategy(StrategyTemplate):
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
         self.bgs: dict[str, BarGenerator] = {}
-        self.last_tick_time: datetime = None
+        self.last_tick_time: datetime | None = None
 
         self.spread_count: int = 0
-        self.spread_data: np.array = np.zeros(100)
+        self.spread_data: np.ndarray = np.zeros(100)
 
         # Obtain contract info
         self.leg1_symbol, self.leg2_symbol = vt_symbols
 
-        def on_bar(bar: BarData):
+        def on_bar(bar: BarData) -> None:
             """"""
             pass
 
@@ -96,7 +96,7 @@ class PairTradingStrategy(StrategyTemplate):
                 bars[vt_symbol] = bg.generate()
             self.on_bars(bars)
 
-        bg: BarGenerator = self.bgs[tick.vt_symbol]
+        bg = self.bgs[tick.vt_symbol]
         bg.update_tick(tick)
 
         self.last_tick_time = tick.datetime
@@ -127,7 +127,7 @@ class PairTradingStrategy(StrategyTemplate):
             return
 
         # 计算布林带
-        buf: np.array = self.spread_data[-self.boll_window:]
+        buf: np.ndarray = self.spread_data[-self.boll_window:]
 
         std = buf.std()
         self.boll_mid = buf.mean()
@@ -166,6 +166,6 @@ class PairTradingStrategy(StrategyTemplate):
         if direction == Direction.LONG:
             price: float = reference + self.tick_add * pricetick
         else:
-            price: float = reference - self.tick_add * pricetick
+            price = reference - self.tick_add * pricetick
 
         return price

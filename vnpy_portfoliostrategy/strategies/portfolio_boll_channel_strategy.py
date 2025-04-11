@@ -49,7 +49,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         self.intra_trade_low: dict[str, float] = {}
 
         self.targets: dict[str, int] = {}
-        self.last_tick_time: datetime = None
+        self.last_tick_time: datetime | None = None
 
         # 获取合约信息
         self.ams: dict[str, ArrayManager] = {}
@@ -91,7 +91,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
             am.update_bar(bar)
 
         for vt_symbol, bar in bars.items():
-            am: ArrayManager = self.ams[vt_symbol]
+            am = self.ams[vt_symbol]
             if not am.inited:
                 return
 

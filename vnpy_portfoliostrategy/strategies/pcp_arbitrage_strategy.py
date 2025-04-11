@@ -56,7 +56,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
         super().__init__(strategy_engine, strategy_name, vt_symbols, setting)
 
         self.bgs: dict[str, BarGenerator] = {}
-        self.last_tick_time: datetime = None
+        self.last_tick_time: datetime | None = None
 
         # 绑定合约代码
         for vt_symbol in self.vt_symbols:
@@ -71,7 +71,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
             else:
                 self.futures_symbol = vt_symbol
 
-            def on_bar(bar: BarData):
+            def on_bar(bar: BarData) -> None:
                 """"""
                 pass
 
@@ -91,7 +91,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
         """策略停止回调"""
         self.write_log("策略停止")
 
-    def on_tick(self, tick: TickData):
+    def on_tick(self, tick: TickData) -> None:
         """行情推送回调"""
         if (
             self.last_tick_time
@@ -102,7 +102,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
                 bars[vt_symbol] = bg.generate()
             self.on_bars(bars)
 
-        bg: BarGenerator = self.bgs[tick.vt_symbol]
+        bg = self.bgs[tick.vt_symbol]
         bg.update_tick(tick)
 
         self.last_tick_time = tick.datetime
@@ -144,7 +144,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
                 self.set_target(self.futures_symbol, 0)
 
         # 执行调仓交易
-        self.rebalance_portfolio()
+        self.rebalance_portfolio(bars)
 
         # 更新策略状态
         self.call_pos = self.get_pos(self.call_symbol)
@@ -162,6 +162,6 @@ class PcpArbitrageStrategy(StrategyTemplate):
         if direction == Direction.LONG:
             price: float = reference + self.price_add
         else:
-            price: float = reference - self.price_add
+            price = reference - self.price_add
 
         return price
