@@ -11,7 +11,7 @@ class PortfolioBarGenerator:
         self,
         on_bars: Callable,
         window: int = 0,
-        on_window_bars: Callable = None,
+        on_window_bars: Callable | None = None,
         interval: Interval = Interval.MINUTE
     ) -> None:
         """构造函数"""
@@ -28,9 +28,9 @@ class PortfolioBarGenerator:
 
         self.window: int = window
         self.window_bars: dict[str, BarData] = {}
-        self.on_window_bars: Callable = on_window_bars
+        self.on_window_bars: Callable | None = on_window_bars
 
-        self.last_dt: datetime = None
+        self.last_dt: datetime | None = None
 
     def update_tick(self, tick: TickData) -> None:
         """更新行情切片数据"""
@@ -44,7 +44,7 @@ class PortfolioBarGenerator:
             self.on_bars(self.bars)
             self.bars = {}
 
-        bar: BarData | None = self.bars.get(tick.vt_symbol, None)
+        bar = self.bars.get(tick.vt_symbol, None)
         if not bar:
             bar = BarData(
                 symbol=tick.symbol,
@@ -119,7 +119,8 @@ class PortfolioBarGenerator:
 
         # 检查K线是否合成完毕
         if not (bar.datetime.minute + 1) % self.window:
-            self.on_window_bars(self.window_bars)
+            if self.on_window_bars:
+                self.on_window_bars(self.window_bars)
             self.window_bars = {}
 
     def update_bar_hour_window(self, bars: dict[str, BarData]) -> None:
@@ -169,7 +170,7 @@ class PortfolioBarGenerator:
                 elif bar.datetime.hour != hour_bar.datetime.hour:
                     self.finished_hour_bars[vt_symbol] = hour_bar
 
-                    dt: datetime = bar.datetime.replace(minute=0, second=0, microsecond=0)
+                    dt = bar.datetime.replace(minute=0, second=0, microsecond=0)
                     hour_bar = BarData(
                         symbol=bar.symbol,
                         exchange=bar.exchange,
@@ -209,7 +210,8 @@ class PortfolioBarGenerator:
     def on_hour_bars(self, bars: dict[str, BarData]) -> None:
         """推送小时K线"""
         if self.window == 1:
-            self.on_window_bars(bars)
+            if self.on_window_bars:
+                self.on_window_bars(bars)
         else:
             for vt_symbol, bar in bars.items():
                 window_bar: BarData | None = self.window_bars.get(vt_symbol, None)
@@ -242,5 +244,6 @@ class PortfolioBarGenerator:
             self.interval_count += 1
             if not self.interval_count % self.window:
                 self.interval_count = 0
-                self.on_window_bars(self.window_bars)
+                if self.on_window_bars:
+                    self.on_window_bars(self.window_bars)
                 self.window_bars = {}

@@ -168,10 +168,10 @@ class StrategyEngine(BaseEngine):
         contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
         if not contract:
             self.write_log(_("委托失败，找不到合约：{}").format(vt_symbol), strategy)
-            return ""
+            return []
 
-        price: float = round_to(price, contract.pricetick)
-        volume: float = round_to(volume, contract.min_volume)
+        price = round_to(price, contract.pricetick)
+        volume = round_to(volume, contract.min_volume)
 
         original_req: OrderRequest = OrderRequest(
             symbol=contract.symbol,
@@ -227,28 +227,30 @@ class StrategyEngine(BaseEngine):
         """获取引擎类型"""
         return self.engine_type
 
-    def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float:
+    def get_pricetick(self, strategy: StrategyTemplate, vt_symbol: str) -> float | None:
         """获取合约价格跳动"""
         contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
 
         if contract:
-            return contract.pricetick
+            pricetick: float = contract.pricetick
+            return pricetick
         else:
             return None
 
-    def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> int:
+    def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> int | None:
         """获取合约乘数"""
         contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
 
         if contract:
-            return contract.size
+            size: int = contract.size
+            return size
         else:
             return None
 
     def load_bars(self, strategy: StrategyTemplate, days: int, interval: Interval) -> None:
         """加载历史数据"""
         vt_symbols: list = strategy.vt_symbols
-        dts: set[datetime] = set()
+        dts_set: set[datetime] = set()
         history_data: dict[tuple, BarData] = {}
 
         # 通过接口、数据服务、数据库获取历史数据
@@ -256,17 +258,17 @@ class StrategyEngine(BaseEngine):
             data: list[BarData] = self.load_bar(vt_symbol, days, interval)
 
             for bar in data:
-                dts.add(bar.datetime)
+                dts_set.add(bar.datetime)
                 history_data[(bar.datetime, vt_symbol)] = bar
 
-        dts: list = list(dts)
+        dts: list[datetime] = list(dts_set)
         dts.sort()
 
         bars: dict = {}
 
         for dt in dts:
             for vt_symbol in vt_symbols:
-                bar: BarData | None = history_data.get((dt, vt_symbol), None)
+                bar = history_data.get((dt, vt_symbol), None)
 
                 # 如果获取到合约指定时间的历史数据，缓存进bars字典
                 if bar:
@@ -346,7 +348,7 @@ class StrategyEngine(BaseEngine):
             self.write_log(_("创建策略失败，存在重名{}").format(strategy_name))
             return
 
-        strategy_class: StrategyTemplate | None = self.classes.get(class_name, None)
+        strategy_class: type[StrategyTemplate] | None = self.classes.get(class_name, None)
         if not strategy_class:
             self.write_log(_("创建策略失败，找不到策略类{}").format(class_name))
             return
@@ -461,7 +463,7 @@ class StrategyEngine(BaseEngine):
         strategy: StrategyTemplate = self.strategies[strategy_name]
         if strategy.trading:
             self.write_log(_("策略{}移除失败，请先停止").format(strategy.strategy_name))
-            return
+            return False
 
         for vt_symbol in strategy.vt_symbols:
             strategies: list = self.symbol_strategy_map[vt_symbol]
@@ -528,7 +530,7 @@ class StrategyEngine(BaseEngine):
 
     def get_strategy_class_parameters(self, class_name: str) -> dict:
         """获取策略类参数"""
-        strategy_class: StrategyTemplate = self.classes[class_name]
+        strategy_class: type[StrategyTemplate] = self.classes[class_name]
 
         parameters: dict = {}
         for name in strategy_class.parameters:
@@ -536,7 +538,7 @@ class StrategyEngine(BaseEngine):
 
         return parameters
 
-    def get_strategy_parameters(self, strategy_name) -> dict:
+    def get_strategy_parameters(self, strategy_name: str) -> dict:
         """获取策略参数"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
         return strategy.get_parameters()
@@ -587,20 +589,20 @@ class StrategyEngine(BaseEngine):
         event: Event = Event(EVENT_PORTFOLIO_STRATEGY, data)
         self.event_engine.put(event)
 
-    def write_log(self, msg: str, strategy: StrategyTemplate = None) -> None:
+    def write_log(self, msg: str, strategy: StrategyTemplate | None = None) -> None:
         """输出日志"""
         if strategy:
-            msg: str = f"{strategy.strategy_name}: {msg}"
+            msg = f"{strategy.strategy_name}: {msg}"
 
         log: LogData = LogData(msg=msg, gateway_name=APP_NAME)
         event: Event = Event(type=EVENT_PORTFOLIO_LOG, data=log)
         self.event_engine.put(event)
 
-    def send_email(self, msg: str, strategy: StrategyTemplate = None) -> None:
+    def send_email(self, msg: str, strategy: StrategyTemplate | None = None) -> None:
         """发送邮件"""
         if strategy:
             subject: str = f"{strategy.strategy_name}"
         else:
-            subject: str = _("组合策略引擎")
+            subject = _("组合策略引擎")
 
         self.main_engine.send_email(subject, msg)

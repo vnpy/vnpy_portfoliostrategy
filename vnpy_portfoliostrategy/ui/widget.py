@@ -112,7 +112,7 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
             manager: StrategyManager = self.managers[strategy_name]
             manager.update_data(data)
         else:
-            manager: StrategyManager = StrategyManager(self, self.strategy_engine, data)
+            manager = StrategyManager(self, self.strategy_engine, data)
             self.scroll_layout.insertWidget(0, manager)
             self.managers[strategy_name] = manager
 
@@ -133,7 +133,7 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
 
         if n == editor.DialogCode.Accepted:
             setting: dict = editor.get_setting()
-            vt_symbols: str = setting.pop("vt_symbols").split(",")
+            vt_symbols: list[str] = setting.pop("vt_symbols").split(",")
             strategy_name: str = setting.pop("strategy_name")
 
             self.strategy_engine.add_strategy(
@@ -221,7 +221,7 @@ class StrategyManager(QtWidgets.QFrame):
 
     def update_data(self, data: dict) -> None:
         """更新策略数据"""
-        self._data: dict = data
+        self._data = data
 
         self.parameters_monitor.update_data(data["parameters"])
         self.variables_monitor.update_data(data["variables"])
@@ -313,7 +313,7 @@ class DataMonitor(QtWidgets.QTableWidget):
             self.setItem(0, column, cell)
             self.cells[name] = cell
 
-    def update_data(self, data: dict):
+    def update_data(self, data: dict) -> None:
         """更新数据"""
         for name, value in data.items():
             cell: QtWidgets.QTableWidgetItem = self.cells[name]
@@ -340,7 +340,7 @@ class LogMonitor(BaseMonitor):
             1, QtWidgets.QHeaderView.ResizeMode.Stretch
         )
 
-    def insert_new_row(self, data) -> None:
+    def insert_new_row(self, data: dict) -> None:
         """插入新行"""
         super().insert_new_row(data)
         self.resizeRowToContents(0)
@@ -374,8 +374,8 @@ class SettingEditor(QtWidgets.QDialog):
             parameters.update(self.parameters)
         else:
             self.setWindowTitle(_("参数编辑：{}").format(self.strategy_name))
-            button_text: str = _("确定")
-            parameters: dict = self.parameters
+            button_text = _("确定")
+            parameters = self.parameters
 
         for name, value in parameters.items():
             type_ = type(value)
@@ -385,7 +385,7 @@ class SettingEditor(QtWidgets.QDialog):
                 validator: QtGui.QIntValidator = QtGui.QIntValidator()
                 edit.setValidator(validator)
             elif type_ is float:
-                validator: QtGui.QDoubleValidator = QtGui.QDoubleValidator()
+                validator = QtGui.QDoubleValidator()
                 edit.setValidator(validator)
 
             form.addRow(f"{name} {type_}", edit)
@@ -413,7 +413,7 @@ class SettingEditor(QtWidgets.QDialog):
                 if value_text == "True":
                     value: bool = True
                 else:
-                    value: bool = False
+                    value = False
             else:
                 value = type_(value_text)
 
