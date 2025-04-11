@@ -8,7 +8,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from pandas import DataFrame
-from typing import Callable
+from collections.abc import Callable
 
 from vnpy.trader.constant import Direction, Offset, Interval, Status
 from vnpy.trader.database import get_database, BaseDatabase
@@ -42,7 +42,7 @@ class BacktestingEngine:
     def __init__(self) -> None:
         """构造函数"""
         self.vt_symbols: list[str] = []
-        self.start: datetime 
+        self.start: datetime
         self.end: datetime
 
         self.rates: dict[str, float]
