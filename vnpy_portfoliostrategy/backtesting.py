@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from functools import lru_cache, partial
 from copy import copy
+from dataclasses import dataclass
 import traceback
 
 import numpy as np
@@ -70,6 +71,8 @@ class BacktestingEngine:
 
         self.trade_count: int = 0
         self.trades: dict[str, TradeData] = {}
+
+        self.cashflows: list[CashflowData] = []
 
         self.logs: list = []
 
@@ -253,6 +256,11 @@ class BacktestingEngine:
             daily_result: PortfolioDailyResult = self.daily_results[d]
             daily_result.add_trade(trade)
 
+        for cashflow in self.cashflows.values():
+            d: date = cashflow.datetime.date()
+            daily_result: PortfolioDailyResult = self.daily_results[d]
+            daily_result.add_cashflow(cashflow)
+
         pre_closes: dict = {}
         start_poses: dict = {}
 
@@ -274,7 +282,7 @@ class BacktestingEngine:
             fields: list = [
                 "date", "trade_count", "turnover",
                 "commission", "slippage", "trading_pnl",
-                "holding_pnl", "total_pnl", "net_pnl"
+                "holding_pnl", "cashflow_pnl", "total_pnl", "net_pnl"
             ]
             for key in fields:
                 value = getattr(daily_result, key)
@@ -726,6 +734,11 @@ class BacktestingEngine:
         msg: str = f"{self.datetime}\t{msg}"
         self.logs.append(msg)
 
+    def record_cashflow(self, value: float, msg: str) -> None:
+        """记录非交易盈亏（分红收入、票息收入、融资成本等）"""
+        cashflow: CashflowData = CashflowData(self.datetime, value, msg)
+        self.cashflows.append(cashflow)
+
     def send_email(self, msg: str, strategy: StrategyTemplate = None) -> None:
         """发送邮件"""
         pass
@@ -853,6 +866,8 @@ class PortfolioDailyResult:
 
         self.contract_results: dict[str, ContractDailyResult] = {}
 
+        self.cashflows: list[CashflowData] = []
+
         for vt_symbol, close_price in close_prices.items():
             self.contract_results[vt_symbol] = ContractDailyResult(result_date, close_price)
 
@@ -864,11 +879,16 @@ class PortfolioDailyResult:
         self.holding_pnl: float = 0
         self.total_pnl: float = 0
         self.net_pnl: float = 0
+        self.cashflow_pnl: float = 0
 
     def add_trade(self, trade: TradeData) -> None:
         """添加成交信息"""
         contract_result: ContractDailyResult = self.contract_results[trade.vt_symbol]
         contract_result.add_trade(trade)
+
+    def add_cashflow(self, cashflow: "CashflowData") -> None:
+        """添加现金流数据"""
+        self.cashflows.append(cashflow)
 
     def calculate_pnl(
         self,
@@ -902,6 +922,13 @@ class PortfolioDailyResult:
 
             self.end_poses[vt_symbol] = contract_result.end_pos
 
+        # 统计非交易盈亏
+        for cashflow in self.cashflows:
+            self.cashflow_pnl += cashflow.value
+
+        self.total_pnl += self.cashflow_pnl
+        self.net_pnl += self.cashflow_pnl
+
     def update_close_prices(self, close_prices: dict[str, float]) -> None:
         """更新每日收盘价"""
         self.close_prices.update(close_prices)
@@ -912,6 +939,14 @@ class PortfolioDailyResult:
                 contract_result.update_close_price(close_price)
             else:
                 self.contract_results[vt_symbol] = ContractDailyResult(self.date, close_price)
+
+
+@dataclass
+class CashflowData:
+    """非交易盈亏数据"""
+    datetime: datetime
+    value: float
+    msg: str
 
 
 @lru_cache(maxsize=999)

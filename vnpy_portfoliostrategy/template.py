@@ -308,3 +308,7 @@ class StrategyTemplate(ABC):
         """同步策略状态数据到文件"""
         if self.trading:
             self.strategy_engine.sync_strategy_data(self)
+
+    def record_cashflow(self, value: float , msg: str = ""):
+        """记录非交易盈亏"""
+        self.strategy_engine.record_cashflow(value, msg)
