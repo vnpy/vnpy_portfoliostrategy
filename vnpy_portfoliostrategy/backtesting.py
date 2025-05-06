@@ -256,7 +256,7 @@ class BacktestingEngine:
             daily_result: PortfolioDailyResult = self.daily_results[d]
             daily_result.add_trade(trade)
 
-        for cashflow in self.cashflows.values():
+        for cashflow in self.cashflows:
             d: date = cashflow.datetime.date()
             daily_result: PortfolioDailyResult = self.daily_results[d]
             daily_result.add_cashflow(cashflow)
