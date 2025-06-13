@@ -54,7 +54,7 @@ class TrendFollowingStrategy(StrategyTemplate):
         self.intra_trade_high: dict[str, float] = {}
         self.intra_trade_low: dict[str, float] = {}
 
-        self.last_tick_time: datetime = None
+        self.last_tick_time: datetime | None = None
 
         # 创建每个合约的ArrayManager
         self.ams: dict[str, ArrayManager] = {}
@@ -92,7 +92,7 @@ class TrendFollowingStrategy(StrategyTemplate):
             am.update_bar(bar)
 
         for vt_symbol, bar in bars.items():
-            am: ArrayManager = self.ams[vt_symbol]
+            am = self.ams[vt_symbol]
             if not am.inited:
                 return
 
@@ -141,6 +141,6 @@ class TrendFollowingStrategy(StrategyTemplate):
         if direction == Direction.LONG:
             price: float = reference + self.price_add
         else:
-            price: float = reference - self.price_add
+            price = reference - self.price_add
 
         return price

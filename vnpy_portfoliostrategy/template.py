@@ -1,16 +1,12 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from copy import copy
-from typing import TYPE_CHECKING, Optional
 from collections import defaultdict
+from typing import Any, cast
 
 from vnpy.trader.constant import Interval, Direction, Offset
 from vnpy.trader.object import BarData, TickData, OrderData, TradeData
-from vnpy.trader.utility import virtual
 
 from .base import EngineType
-
-if TYPE_CHECKING:
-    from .engine import StrategyEngine
 
 
 class StrategyTemplate(ABC):
@@ -22,13 +18,13 @@ class StrategyTemplate(ABC):
 
     def __init__(
         self,
-        strategy_engine: "StrategyEngine",
+        strategy_engine: Any,
         strategy_name: str,
         vt_symbols: list[str],
         setting: dict
     ) -> None:
         """构造函数"""
-        self.strategy_engine: "StrategyEngine" = strategy_engine
+        self.strategy_engine: Any = strategy_engine
         self.strategy_name: str = strategy_name
         self.vt_symbols: list[str] = vt_symbols
 
@@ -94,30 +90,27 @@ class StrategyTemplate(ABC):
         }
         return strategy_data
 
-    @virtual
+    @abstractmethod
     def on_init(self) -> None:
         """策略初始化回调"""
-        pass
+        return
 
-    @virtual
     def on_start(self) -> None:
         """策略启动回调"""
-        pass
+        return
 
-    @virtual
     def on_stop(self) -> None:
         """策略停止回调"""
-        pass
+        return
 
-    @virtual
     def on_tick(self, tick: TickData) -> None:
         """行情推送回调"""
-        pass
+        return
 
-    @virtual
+    @abstractmethod
     def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
-        pass
+        return
 
     def update_trade(self, trade: TradeData) -> None:
         """成交数据更新"""
@@ -233,7 +226,7 @@ class StrategyTemplate(ABC):
             # 空头
             elif diff < 0:
                 # 计算空头委托价
-                order_price: float = self.calculate_price(
+                order_price = self.calculate_price(
                     vt_symbol,
                     Direction.SHORT,
                     bar.close_price
@@ -256,7 +249,6 @@ class StrategyTemplate(ABC):
                 if short_volume:
                     self.short(vt_symbol, order_price, short_volume)
 
-    @virtual
     def calculate_price(
         self,
         vt_symbol: str,
@@ -266,7 +258,7 @@ class StrategyTemplate(ABC):
         """计算调仓委托价格（支持按需重载实现）"""
         return reference
 
-    def get_order(self, vt_orderid: str) -> Optional[OrderData]:
+    def get_order(self, vt_orderid: str) -> OrderData | None:
         """查询委托数据"""
         return self.orders.get(vt_orderid, None)
 
@@ -280,15 +272,15 @@ class StrategyTemplate(ABC):
 
     def get_engine_type(self) -> EngineType:
         """查询引擎类型"""
-        return self.strategy_engine.get_engine_type()
+        return cast(EngineType, self.strategy_engine.get_engine_type())
 
     def get_pricetick(self, vt_symbol: str) -> float:
         """查询合约最小价格跳动"""
-        return self.strategy_engine.get_pricetick(self, vt_symbol)
+        return cast(float, self.strategy_engine.get_pricetick(self, vt_symbol))
 
     def get_size(self, vt_symbol: str) -> int:
         """查询合约乘数"""
-        return self.strategy_engine.get_size(self, vt_symbol)
+        return cast(int, self.strategy_engine.get_size(self, vt_symbol))
 
     def load_bars(self, days: int, interval: Interval = Interval.MINUTE) -> None:
         """加载历史K线数据来执行初始化"""
