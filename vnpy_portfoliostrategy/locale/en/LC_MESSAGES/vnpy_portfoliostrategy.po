@@ -30,11 +30,11 @@ msgstr "The start date must be earlier than the end date"
 
 #: vnpy_portfoliostrategy\backtesting.py:177
 msgid "{}加载进度：{} [{:.0%}]"
-msgstr "Loading progress: {} [{:.0%}]"
+msgstr "{} Loading progress: {} [{:.0%}]"
 
 #: vnpy_portfoliostrategy\backtesting.py:197
 msgid "{}历史数据加载完成，数据量：{}"
-msgstr "Historical data loading completed, data count: {}"
+msgstr "{} Historical data loading completed, data count: {}"
 
 #: vnpy_portfoliostrategy\backtesting.py:199
 msgid "所有历史数据加载完成"
