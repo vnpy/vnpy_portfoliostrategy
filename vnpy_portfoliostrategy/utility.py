@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from collections.abc import Callable
 
 from vnpy.trader.object import BarData, TickData, Interval
@@ -12,7 +12,8 @@ class PortfolioBarGenerator:
         on_bars: Callable,
         window: int = 0,
         on_window_bars: Callable | None = None,
-        interval: Interval = Interval.MINUTE
+        interval: Interval = Interval.MINUTE,
+        daily_end: time | None = None
     ) -> None:
         """构造函数"""
         self.on_bars: Callable = on_bars
@@ -26,11 +27,18 @@ class PortfolioBarGenerator:
         self.hour_bars: dict[str, BarData] = {}
         self.finished_hour_bars: dict[str, BarData] = {}
 
+        self.daily_bars: dict[str, BarData] = {}
+        self.finished_daily_bars: dict[str, BarData] = {}
+
         self.window: int = window
         self.window_bars: dict[str, BarData] = {}
         self.on_window_bars: Callable | None = on_window_bars
 
         self.last_dt: datetime | None = None
+
+        self.daily_end: time | None = daily_end
+        if self.interval == Interval.DAILY and not self.daily_end:
+            raise RuntimeError("合成日K线必须传入每日收盘时间")
 
     def update_tick(self, tick: TickData) -> None:
         """更新行情切片数据"""
@@ -78,8 +86,10 @@ class PortfolioBarGenerator:
         """更新一分钟K线"""
         if self.interval == Interval.MINUTE:
             self.update_bar_minute_window(bars)
-        else:
+        elif self.interval == Interval.HOUR:
             self.update_bar_hour_window(bars)
+        else:
+            self.update_bar_daily_window(bars)
 
     def update_bar_minute_window(self, bars: dict[str, BarData]) -> None:
         """更新N分钟K线"""
@@ -206,6 +216,58 @@ class PortfolioBarGenerator:
         if self.finished_hour_bars:
             self.on_hour_bars(self.finished_hour_bars)
             self.finished_hour_bars = {}
+
+    def update_bar_daily_window(self, bars: dict[str, BarData]) -> None:
+        """更新日K线"""
+        for vt_symbol, bar in bars.items():
+            daily_bar: BarData | None = self.daily_bars.get(vt_symbol, None)
+
+            # 如果没有日K线则创建
+            if not daily_bar:
+                daily_bar = BarData(
+                    symbol=bar.symbol,
+                    exchange=bar.exchange,
+                    datetime=bar.datetime,
+                    gateway_name=bar.gateway_name,
+                    open_price=bar.open_price,
+                    high_price=bar.high_price,
+                    low_price=bar.low_price
+                )
+                self.daily_bars[vt_symbol] = daily_bar
+            # 否则更新最高价和最低价
+            else:
+                daily_bar.high_price = max(
+                    daily_bar.high_price,
+                    bar.high_price
+                )
+                daily_bar.low_price = min(
+                    daily_bar.low_price,
+                    bar.low_price
+                )
+
+            # 更新收盘价、成交量、成交额、持仓量
+            daily_bar.close_price = bar.close_price
+            daily_bar.volume += bar.volume
+            daily_bar.turnover += bar.turnover
+            daily_bar.open_interest = bar.open_interest
+
+            # 检查日K线是否合成完毕
+            if bar.datetime.time() == self.daily_end:
+                daily_bar.datetime = bar.datetime.replace(
+                    hour=0,
+                    minute=0,
+                    second=0,
+                    microsecond=0
+                )
+
+                self.finished_daily_bars[vt_symbol] = daily_bar
+                self.daily_bars[vt_symbol] = None
+
+        # 推送合成完毕的日K线
+        if self.finished_daily_bars:
+            if self.on_window_bars:
+                self.on_window_bars(self.finished_daily_bars)
+            self.finished_daily_bars = {}
 
     def on_hour_bars(self, bars: dict[str, BarData]) -> None:
         """推送小时K线"""
