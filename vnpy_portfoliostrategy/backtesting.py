@@ -104,7 +104,7 @@ class BacktestingEngine:
         end: datetime | None = None,
         risk_free: float = 0,
         annual_days: int = 240,
-        ytm_symbols: set[str] | None = None
+        ytm_symbols: list[str] | None = None
     ) -> None:
         """设置参数"""
         self.vt_symbols = vt_symbols
@@ -126,8 +126,8 @@ class BacktestingEngine:
         self.annual_days = annual_days
 
         if ytm_symbols is None:
-            ytm_symbols = {}
-        self.ytm_symbols = ytm_symbols
+            ytm_symbols = []
+        self.ytm_symbols = set(ytm_symbols)
 
     def add_strategy(self, strategy_class: type[StrategyTemplate], setting: dict) -> None:
         """增加策略"""
