@@ -50,6 +50,8 @@ class BacktestingEngine:
         self.sizes: dict[str, float]
         self.priceticks: dict[str, float]
 
+        self.ytm_symbols: set[str]
+
         self.capital: float = 1_000_000
         self.risk_free: float = 0
         self.annual_days: int = 240
@@ -101,7 +103,8 @@ class BacktestingEngine:
         capital: float = 0,
         end: datetime | None = None,
         risk_free: float = 0,
-        annual_days: int = 240
+        annual_days: int = 240,
+        ytm_symbols: set[str] | None = None
     ) -> None:
         """设置参数"""
         self.vt_symbols = vt_symbols
@@ -121,6 +124,10 @@ class BacktestingEngine:
         self.capital = capital
         self.risk_free = risk_free
         self.annual_days = annual_days
+
+        if ytm_symbols is None:
+            ytm_symbols = {}
+        self.ytm_symbols = ytm_symbols
 
     def add_strategy(self, strategy_class: type[StrategyTemplate], setting: dict) -> None:
         """增加策略"""
@@ -166,6 +173,14 @@ class BacktestingEngine:
                         end
                     )
 
+                    # 对ytm数据特殊处理
+                    if vt_symbol in self.ytm_symbols:
+                        for bar in data:
+                            bar.open_price = 100 - bar.open_price
+                            bar.high_price = 100 - bar.high_price
+                            bar.low_price = 100 - bar.low_price
+                            bar.close_price = 100 - bar.close_price
+
                     for bar in data:
                         self.dts.add(bar.datetime)
                         self.history_data[(bar.datetime, vt_symbol)] = bar
@@ -187,6 +202,13 @@ class BacktestingEngine:
                     self.start,
                     self.end
                 )
+
+                if vt_symbol in self.ytm_symbols:
+                    for bar in data:
+                        bar.open_price = 100 - bar.open_price
+                        bar.high_price = 100 - bar.high_price
+                        bar.low_price = 100 - bar.low_price
+                        bar.close_price = 100 - bar.close_price
 
                 for bar in data:
                     self.dts.add(bar.datetime)
