@@ -530,7 +530,7 @@ class BacktestingEngine:
         self,
         optimization_setting: OptimizationSetting,
         max_workers: int | None = None,
-        ngen_size: int = 30,
+        ngen: int = 30,
         output: bool = True
     ) -> list:
         """遗传算法优化"""
@@ -543,7 +543,7 @@ class BacktestingEngine:
             optimization_setting,
             get_target_value,
             max_workers=max_workers,
-            ngen_size=ngen_size,
+            ngen=ngen,
             output=self.output
         )
 
