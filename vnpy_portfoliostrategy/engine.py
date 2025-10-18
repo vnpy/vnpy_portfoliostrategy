@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 from vnpy.event import Event, EventEngine
-from vnpy.trader.engine import BaseEngine, MainEngine
+from vnpy.trader.engine import BaseEngine, MainEngine, LogEngine
 from vnpy.trader.object import (
     OrderRequest,
     CancelRequest,
@@ -94,6 +94,9 @@ class StrategyEngine(BaseEngine):
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
+
+        log_engine: LogEngine = self.main_engine.get_engine("log")
+        log_engine.register_log(EVENT_PORTFOLIO_LOG)
 
     def init_datafeed(self) -> None:
         """初始化数据服务"""
