@@ -21,7 +21,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "vnpy>=4.0.0"
+    "vnpy>=4.4.0"
 ]
 keywords = ["quant", "quantitative", "investment", "trading", "algotrading"]
 

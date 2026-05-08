@@ -601,11 +601,11 @@ class StrategyEngine(BaseEngine):
         event: Event = Event(type=EVENT_PORTFOLIO_LOG, data=log)
         self.event_engine.put(event)
 
-    def send_email(self, msg: str, strategy: StrategyTemplate | None = None) -> None:
-        """发送邮件"""
+    def send_notification(self, msg: str, strategy: StrategyTemplate | None = None) -> None:
+        """通过已配置渠道推送通知"""
         if strategy:
             subject: str = f"{strategy.strategy_name}"
         else:
             subject = _("组合策略引擎")
 
-        self.main_engine.send_email(subject, msg)
+        self.main_engine.send_notification(msg, subject)
