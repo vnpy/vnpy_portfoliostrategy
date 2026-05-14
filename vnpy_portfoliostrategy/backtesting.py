@@ -730,8 +730,6 @@ class BacktestingEngine:
         """通过已配置渠道推送通知"""
         pass
 
-    send_email = send_notification
-
     def sync_strategy_data(self, strategy: StrategyTemplate) -> None:
         """保存策略数据到文件"""
         pass
