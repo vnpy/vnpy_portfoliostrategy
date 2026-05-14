@@ -726,9 +726,11 @@ class BacktestingEngine:
         msg = f"{self.datetime}\t{msg}"
         self.logs.append(msg)
 
-    def send_email(self, msg: str, strategy: StrategyTemplate | None = None) -> None:
-        """发送邮件"""
+    def send_notification(self, msg: str, strategy: StrategyTemplate | None = None) -> None:
+        """通过已配置渠道推送通知"""
         pass
+
+    send_email = send_notification
 
     def sync_strategy_data(self, strategy: StrategyTemplate) -> None:
         """保存策略数据到文件"""

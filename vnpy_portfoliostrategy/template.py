@@ -291,10 +291,12 @@ class StrategyTemplate(ABC):
         if self.inited:
             self.strategy_engine.put_strategy_event(self)
 
-    def send_email(self, msg: str) -> None:
-        """发送邮件信息"""
+    def send_notification(self, msg: str) -> None:
+        """通过已配置渠道推送通知"""
         if self.inited:
-            self.strategy_engine.send_email(msg, self)
+            self.strategy_engine.send_notification(msg, self)
+
+    send_email = send_notification
 
     def sync_data(self) -> None:
         """同步策略状态数据到文件"""
