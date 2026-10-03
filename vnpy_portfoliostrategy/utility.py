@@ -1,3 +1,5 @@
+"""组合K线生成工具。"""
+
 from datetime import datetime, time
 from collections.abc import Callable
 

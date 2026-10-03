@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+"""组合策略应用包。"""
 
 
 from pathlib import Path
@@ -54,7 +55,7 @@ __version__ = "1.3.0"
 
 
 class PortfolioStrategyApp(BaseApp):
-    """"""
+    """组合策略应用。"""
     from .locale import _
 
     app_name: str = APP_NAME

@@ -1,3 +1,5 @@
+"""组合策略实盘引擎。"""
+
 import importlib
 import glob
 import traceback
@@ -57,7 +59,7 @@ class StrategyEngine(BaseEngine):
     data_filename: str = "portfolio_strategy_data.json"
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        """"""
+        """初始化策略容器、委托映射和数据服务。"""
         super().__init__(main_engine, event_engine, APP_NAME)
 
         self.strategy_data: dict[str, dict] = {}

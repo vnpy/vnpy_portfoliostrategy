@@ -1,3 +1,5 @@
+"""加载组合策略的翻译文本。"""
+
 from pathlib import Path
 import gettext
 

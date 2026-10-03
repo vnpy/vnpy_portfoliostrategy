@@ -1,3 +1,5 @@
+"""组合布林通道策略。"""
+
 from datetime import datetime
 
 from vnpy.trader.utility import ArrayManager, Interval

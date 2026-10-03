@@ -1,3 +1,5 @@
+"""组合策略回测。"""
+
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from functools import lru_cache, partial
@@ -844,7 +846,7 @@ class PortfolioDailyResult:
     """组合每日盈亏结果"""
 
     def __init__(self, result_date: date, close_prices: dict[str, float]) -> None:
-        """"""
+        """按各合约收盘价创建组合当日盈亏，并初始化汇总字段。"""
         self.date: date = result_date
         self.close_prices: dict[str, float] = close_prices
         self.pre_closes: dict[str, float] = {}

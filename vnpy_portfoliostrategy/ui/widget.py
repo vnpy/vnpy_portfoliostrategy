@@ -1,3 +1,5 @@
+"""组合策略界面。"""
+
 from vnpy.event import Event, EventEngine
 from vnpy.trader.engine import MainEngine
 from vnpy.trader.ui import QtCore, QtGui, QtWidgets

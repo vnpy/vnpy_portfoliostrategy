@@ -1,3 +1,5 @@
+"""配对交易策略。"""
+
 from datetime import datetime
 
 import numpy as np
@@ -65,7 +67,7 @@ class PairTradingStrategy(StrategyTemplate):
         self.leg1_symbol, self.leg2_symbol = vt_symbols
 
         def on_bar(bar: BarData) -> None:
-            """"""
+            """空回调，不处理K线。"""
             pass
 
         for vt_symbol in self.vt_symbols:

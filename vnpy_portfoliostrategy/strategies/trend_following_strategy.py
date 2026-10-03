@@ -1,3 +1,5 @@
+"""ATR-RSI趋势跟踪策略。"""
+
 from datetime import datetime
 
 from vnpy.trader.utility import ArrayManager

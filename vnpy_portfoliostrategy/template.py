@@ -1,3 +1,5 @@
+"""组合策略模板。"""
+
 from abc import ABC, abstractmethod
 from copy import copy
 from collections import defaultdict

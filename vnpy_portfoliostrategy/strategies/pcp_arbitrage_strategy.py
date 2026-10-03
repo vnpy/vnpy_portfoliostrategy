@@ -1,3 +1,5 @@
+"""期权平价套利策略。"""
+
 from datetime import datetime
 
 from vnpy.trader.utility import BarGenerator, extract_vt_symbol
@@ -72,7 +74,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
                 self.futures_symbol = vt_symbol
 
             def on_bar(bar: BarData) -> None:
-                """"""
+                """空回调，不处理K线。"""
                 pass
 
             self.bgs[vt_symbol] = BarGenerator(on_bar)
