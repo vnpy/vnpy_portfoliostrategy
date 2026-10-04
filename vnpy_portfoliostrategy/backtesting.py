@@ -10,10 +10,10 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from pandas import DataFrame, Series
-from collections.abc import Callable
-from typing import cast
+from collections.abc import Callable, Hashable
+from typing import Any, cast
 
-from vnpy.trader.constant import Direction, Offset, Interval, Status
+from vnpy.trader.constant import Direction, Exchange, Offset, Interval, Status
 from vnpy.trader.database import get_database, BaseDatabase
 from vnpy.trader.object import OrderData, TradeData, BarData
 from vnpy.trader.utility import round_to, extract_vt_symbol
@@ -152,13 +152,14 @@ class BacktestingEngine:
         total_delta: timedelta = self.end - self.start
         interval_delta: timedelta = INTERVAL_DELTA_MAP[self.interval]
 
+        vt_symbol: str
         for vt_symbol in self.vt_symbols:
             if self.interval == Interval.MINUTE:
                 start: datetime = self.start
                 end: datetime = self.start + progress_delta
                 progress: float = 0
 
-                data_count = 0
+                data_count: int = 0
                 while start < self.end:
                     end = min(end, self.end)
 
@@ -169,6 +170,7 @@ class BacktestingEngine:
                         end
                     )
 
+                    bar: BarData
                     for bar in data:
                         self.dts.add(bar.datetime)
                         self.history_data[(bar.datetime, vt_symbol)] = bar
@@ -176,7 +178,7 @@ class BacktestingEngine:
 
                     progress += progress_delta / total_delta
                     progress = min(progress, 1)
-                    progress_bar = "#" * int(progress * 10)
+                    progress_bar: str = "#" * int(progress * 10)
                     self.output(_("{}加载进度：{} [{:.0%}]").format(
                         vt_symbol, progress_bar, progress
                     ))
@@ -212,6 +214,7 @@ class BacktestingEngine:
         day_count: int = 0
         _ix: int = 0
 
+        dt: datetime
         for _ix, dt in enumerate(dts):
             if self.datetime and dt.day != self.datetime.day:
                 day_count += 1
@@ -251,6 +254,7 @@ class BacktestingEngine:
             self.output(_("成交记录为空，无法计算"))
             return None
 
+        trade: TradeData
         for trade in self.trades.values():
             d: date = cast(datetime, trade.datetime).date()
             daily_result: PortfolioDailyResult = self.daily_results[d]
@@ -279,8 +283,9 @@ class BacktestingEngine:
                 "commission", "slippage", "trading_pnl",
                 "holding_pnl", "total_pnl", "net_pnl"
             ]
+            key: str
             for key in fields:
-                value = getattr(daily_result, key)
+                value: object = getattr(daily_result, key)
                 results[key].append(value)
 
         if results:
@@ -352,11 +357,12 @@ class BacktestingEngine:
             end_balance = df["balance"].iloc[-1]
             max_drawdown = df["drawdown"].min()
             max_ddpercent = df["ddpercent"].min()
-            max_drawdown_end = df["drawdown"].idxmin()
+            max_drawdown_end: Hashable = df["drawdown"].idxmin()
 
             if isinstance(max_drawdown_end, date):
-                max_drawdown_start = df["balance"][:max_drawdown_end].idxmax()
-                max_drawdown_duration = (max_drawdown_end - max_drawdown_start).days
+                # 收窄成 date 后，既当作切片下标又做日期差，pandas 存根无法同时表达
+                max_drawdown_start: Hashable = df["balance"][:max_drawdown_end].idxmax()  # type: ignore[misc]
+                max_drawdown_duration = (max_drawdown_end - max_drawdown_start).days  # type: ignore[operator]
             else:
                 max_drawdown_duration = 0
 
@@ -454,6 +460,9 @@ class BacktestingEngine:
         }
 
         # 过滤极值
+        key: str
+        # 统计字典里同时有日期和数字，后面会交给 nan_to_num
+        value: Any
         for key, value in statistics.items():
             if value in (np.inf, -np.inf):
                 value = 0
@@ -470,20 +479,20 @@ class BacktestingEngine:
         if df is None:
             return
 
-        fig = make_subplots(
+        fig: go.Figure = make_subplots(
             rows=4,
             cols=1,
             subplot_titles=["Balance", "Drawdown", "Daily Pnl", "Pnl Distribution"],
             vertical_spacing=0.06
         )
 
-        balance_line = go.Scatter(
+        balance_line: go.Scatter = go.Scatter(
             x=df.index,
             y=df["balance"],
             mode="lines",
             name="Balance"
         )
-        drawdown_scatter = go.Scatter(
+        drawdown_scatter: go.Scatter = go.Scatter(
             x=df.index,
             y=df["drawdown"],
             fillcolor="red",
@@ -491,8 +500,8 @@ class BacktestingEngine:
             mode="lines",
             name="Drawdown"
         )
-        pnl_bar = go.Bar(y=df["net_pnl"], name="Daily Pnl")
-        pnl_histogram = go.Histogram(x=df["net_pnl"], nbinsx=100, name="Days")
+        pnl_bar: go.Bar = go.Bar(y=df["net_pnl"], name="Daily Pnl")
+        pnl_histogram: go.Histogram = go.Histogram(x=df["net_pnl"], nbinsx=100, name="Days")
 
         fig.add_trace(balance_line, row=1, col=1)
         fig.add_trace(drawdown_scatter, row=2, col=1)
@@ -522,13 +531,14 @@ class BacktestingEngine:
         )
 
         if output:
+            result: tuple[str, float, dict]
             for result in results:
                 msg: str = _("参数：{}, 目标：{}").format(result[0], result[1])
                 self.output(msg)
 
         return results
 
-    run_optimization = run_bf_optimization
+    run_optimization: Callable[["BacktestingEngine", OptimizationSetting, bool, int | None], list] = run_bf_optimization
 
     def run_ga_optimization(
         self,
@@ -552,6 +562,7 @@ class BacktestingEngine:
         )
 
         if output:
+            result: tuple[str, float, dict]
             for result in results:
                 msg: str = _("参数：{}, 目标：{}").format(result[0], result[1])
                 self.output(msg)
@@ -563,6 +574,7 @@ class BacktestingEngine:
         d: date = dt.date()
 
         close_prices: dict = {}
+        bar: BarData
         for bar in bars.values():
             close_prices[bar.vt_symbol] = bar.close_price
 
@@ -578,6 +590,7 @@ class BacktestingEngine:
         self.datetime = dt
 
         bars: dict[str, BarData] = {}
+        vt_symbol: str
         for vt_symbol in self.vt_symbols:
             bar: BarData | None = self.history_data.get((dt, vt_symbol), None)
 
@@ -611,6 +624,7 @@ class BacktestingEngine:
 
     def cross_limit_order(self) -> None:
         """撮合限价委托"""
+        order: OrderData
         for order in list(self.active_limit_orders.values()):
             bar: BarData = self.bars[order.vt_symbol]
 
@@ -652,7 +666,7 @@ class BacktestingEngine:
             self.trade_count += 1
 
             if long_cross:
-                trade_price = min(order.price, long_best_price)
+                trade_price: float = min(order.price, long_best_price)
             else:
                 trade_price = max(order.price, short_best_price)
 
@@ -694,6 +708,8 @@ class BacktestingEngine:
     ) -> list[str]:
         """发送委托"""
         price = round_to(price, self.priceticks[vt_symbol])
+        symbol: str
+        exchange: Exchange
         symbol, exchange = extract_vt_symbol(vt_symbol)
 
         self.limit_order_count += 1
@@ -820,9 +836,10 @@ class ContractDailyResult:
         # 计算交易盈亏
         self.trade_count = len(self.trades)
 
+        trade: TradeData
         for trade in self.trades:
             if trade.direction == Direction.LONG:
-                pos_change = trade.volume
+                pos_change: float = trade.volume
             else:
                 pos_change = -trade.volume
 
@@ -857,6 +874,8 @@ class PortfolioDailyResult:
 
         self.contract_results: dict[str, ContractDailyResult] = {}
 
+        vt_symbol: str
+        close_price: float
         for vt_symbol, close_price in close_prices.items():
             self.contract_results[vt_symbol] = ContractDailyResult(result_date, close_price)
 
@@ -886,6 +905,8 @@ class PortfolioDailyResult:
         self.pre_closes = pre_closes
         self.start_poses = start_poses
 
+        vt_symbol: str
+        contract_result: ContractDailyResult
         for vt_symbol, contract_result in self.contract_results.items():
             contract_result.calculate_pnl(
                 pre_closes.get(vt_symbol, 0),
@@ -910,6 +931,8 @@ class PortfolioDailyResult:
         """更新每日收盘价"""
         self.close_prices.update(close_prices)
 
+        vt_symbol: str
+        close_price: float
         for vt_symbol, close_price in close_prices.items():
             contract_result: ContractDailyResult | None = self.contract_results.get(vt_symbol, None)
             if contract_result:
@@ -926,6 +949,8 @@ def load_bar_data(
     end: datetime
 ) -> list[BarData]:
     """通过数据库获取历史数据"""
+    symbol: str
+    exchange: Exchange
     symbol, exchange = extract_vt_symbol(vt_symbol)
 
     database: BaseDatabase = get_database()

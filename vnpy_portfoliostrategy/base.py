@@ -3,7 +3,7 @@
 from enum import Enum
 from .locale import _
 
-APP_NAME = "PortfolioStrategy"
+APP_NAME: str = "PortfolioStrategy"
 
 
 class EngineType(Enum):
@@ -12,5 +12,5 @@ class EngineType(Enum):
     BACKTESTING = _("回测")
 
 
-EVENT_PORTFOLIO_LOG = "ePortfolioLog"
-EVENT_PORTFOLIO_STRATEGY = "ePortfolioStrategy"
+EVENT_PORTFOLIO_LOG: str = "ePortfolioLog"
+EVENT_PORTFOLIO_STRATEGY: str = "ePortfolioStrategy"

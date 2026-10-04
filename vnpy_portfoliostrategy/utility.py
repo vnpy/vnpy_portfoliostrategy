@@ -48,6 +48,7 @@ class PortfolioBarGenerator:
             return
 
         if self.last_dt and self.last_dt.minute != tick.datetime.minute:
+            cached_bar: BarData
             for cached_bar in self.bars.values():
                 cached_bar.datetime = cached_bar.datetime.replace(second=0, microsecond=0)
 
@@ -95,6 +96,8 @@ class PortfolioBarGenerator:
 
     def update_bar_minute_window(self, bars: dict[str, BarData]) -> None:
         """更新N分钟K线"""
+        vt_symbol: str
+        bar: BarData
         for vt_symbol, bar in bars.items():
             window_bar: BarData | None = self.window_bars.get(vt_symbol, None)
 
@@ -137,6 +140,8 @@ class PortfolioBarGenerator:
 
     def update_bar_hour_window(self, bars: dict[str, BarData]) -> None:
         """更新小时K线"""
+        vt_symbol: str
+        bar: BarData
         for vt_symbol, bar in bars.items():
             hour_bar: BarData | None = self.hour_bars.get(vt_symbol, None)
 
@@ -221,6 +226,8 @@ class PortfolioBarGenerator:
 
     def update_bar_daily_window(self, bars: dict[str, BarData]) -> None:
         """更新日K线"""
+        vt_symbol: str
+        bar: BarData
         for vt_symbol, bar in bars.items():
             daily_bar: BarData | None = self.daily_bars.get(vt_symbol, None)
 
@@ -277,6 +284,8 @@ class PortfolioBarGenerator:
             if self.on_window_bars:
                 self.on_window_bars(bars)
         else:
+            vt_symbol: str
+            bar: BarData
             for vt_symbol, bar in bars.items():
                 window_bar: BarData | None = self.window_bars.get(vt_symbol, None)
                 if not window_bar:

@@ -2,6 +2,8 @@
 
 from datetime import datetime
 
+import numpy as np
+
 from vnpy.trader.utility import ArrayManager
 from vnpy.trader.object import TickData, BarData
 from vnpy.trader.constant import Direction
@@ -13,20 +15,20 @@ from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 class TrendFollowingStrategy(StrategyTemplate):
     """ATR-RSI趋势跟踪策略"""
 
-    author = "用Python的交易员"
+    author: str = "用Python的交易员"
 
-    atr_window = 22
-    atr_ma_window = 10
-    rsi_window = 5
-    rsi_entry = 16
-    trailing_percent = 0.8
-    fixed_size = 1
-    price_add = 5
+    atr_window: int = 22
+    atr_ma_window: int = 10
+    rsi_window: int = 5
+    rsi_entry: int = 16
+    trailing_percent: float = 0.8
+    fixed_size: int = 1
+    price_add: int = 5
 
-    rsi_buy = 0
-    rsi_sell = 0
+    rsi_buy: int = 0
+    rsi_sell: int = 0
 
-    parameters = [
+    parameters: list[str] = [
         "price_add",
         "atr_window",
         "atr_ma_window",
@@ -35,7 +37,7 @@ class TrendFollowingStrategy(StrategyTemplate):
         "trailing_percent",
         "fixed_size"
     ]
-    variables = [
+    variables: list[str] = [
         "rsi_buy",
         "rsi_sell"
     ]
@@ -60,10 +62,11 @@ class TrendFollowingStrategy(StrategyTemplate):
 
         # 创建每个合约的ArrayManager
         self.ams: dict[str, ArrayManager] = {}
+        vt_symbol: str
         for vt_symbol in self.vt_symbols:
             self.ams[vt_symbol] = ArrayManager()
 
-        self.pbg = PortfolioBarGenerator(self.on_bars)
+        self.pbg: PortfolioBarGenerator = PortfolioBarGenerator(self.on_bars)
 
     def on_init(self) -> None:
         """策略初始化回调"""
@@ -89,6 +92,8 @@ class TrendFollowingStrategy(StrategyTemplate):
     def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         # 更新K线计算RSI数值
+        vt_symbol: str
+        bar: BarData
         for vt_symbol, bar in bars.items():
             am: ArrayManager = self.ams[vt_symbol]
             am.update_bar(bar)
@@ -98,12 +103,12 @@ class TrendFollowingStrategy(StrategyTemplate):
             if not am.inited:
                 return
 
-            atr_array = am.atr(self.atr_window, array=True)
+            atr_array: np.ndarray = am.atr(self.atr_window, array=True)
             self.atr_data[vt_symbol] = atr_array[-1]
             self.atr_ma[vt_symbol] = atr_array[-self.atr_ma_window:].mean()
             self.rsi_data[vt_symbol] = am.rsi(self.rsi_window)
 
-            current_pos = self.get_pos(vt_symbol)
+            current_pos: float = self.get_pos(vt_symbol)
             if current_pos == 0:
                 self.intra_trade_high[vt_symbol] = bar.high_price
                 self.intra_trade_low[vt_symbol] = bar.low_price
@@ -120,7 +125,7 @@ class TrendFollowingStrategy(StrategyTemplate):
                 self.intra_trade_high[vt_symbol] = max(self.intra_trade_high[vt_symbol], bar.high_price)
                 self.intra_trade_low[vt_symbol] = bar.low_price
 
-                long_stop = self.intra_trade_high[vt_symbol] * (1 - self.trailing_percent / 100)
+                long_stop: float = self.intra_trade_high[vt_symbol] * (1 - self.trailing_percent / 100)
 
                 if bar.close_price <= long_stop:
                     self.set_target(vt_symbol, 0)
@@ -129,7 +134,7 @@ class TrendFollowingStrategy(StrategyTemplate):
                 self.intra_trade_low[vt_symbol] = min(self.intra_trade_low[vt_symbol], bar.low_price)
                 self.intra_trade_high[vt_symbol] = bar.high_price
 
-                short_stop = self.intra_trade_low[vt_symbol] * (1 + self.trailing_percent / 100)
+                short_stop: float = self.intra_trade_low[vt_symbol] * (1 + self.trailing_percent / 100)
 
                 if bar.close_price >= short_stop:
                     self.set_target(vt_symbol, 0)

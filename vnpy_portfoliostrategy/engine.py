@@ -7,7 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from types import ModuleType
 from collections.abc import Callable
-from typing import cast
+from typing import Any, cast
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
@@ -129,6 +129,7 @@ class StrategyEngine(BaseEngine):
         if not strategies:
             return
 
+        strategy: StrategyTemplate
         for strategy in strategies:
             if strategy.inited:
                 self.call_strategy_func(strategy, strategy.on_tick, tick)
@@ -199,6 +200,7 @@ class StrategyEngine(BaseEngine):
 
         vt_orderids: list = []
 
+        req: OrderRequest
         for req in req_list:
             vt_orderid: str = self.main_engine.send_order(
                 req, contract.gateway_name)
@@ -226,6 +228,7 @@ class StrategyEngine(BaseEngine):
 
     def cancel_all(self, strategy: StrategyTemplate) -> None:
         """委托撤单"""
+        vt_orderid: str
         for vt_orderid in list(strategy.active_orderids):
             self.cancel_order(strategy, vt_orderid)
 
@@ -260,9 +263,11 @@ class StrategyEngine(BaseEngine):
         history_data: dict[tuple, BarData] = {}
 
         # 通过接口、数据服务、数据库获取历史数据
+        vt_symbol: str
         for vt_symbol in vt_symbols:
             data: list[BarData] = self.load_bar(vt_symbol, days, interval)
 
+            history_bar: BarData
             for history_bar in data:
                 dts_set.add(history_bar.datetime)
                 history_data[(history_bar.datetime, vt_symbol)] = history_bar
@@ -272,6 +277,7 @@ class StrategyEngine(BaseEngine):
 
         bars: dict = {}
 
+        dt: datetime
         for dt in dts:
             for vt_symbol in vt_symbols:
                 bar: BarData | None = history_data.get((dt, vt_symbol), None)
@@ -299,6 +305,8 @@ class StrategyEngine(BaseEngine):
 
     def load_bar(self, vt_symbol: str, days: int, interval: Interval) -> list[BarData]:
         """加载单个合约历史数据"""
+        symbol: str
+        exchange: Exchange
         symbol, exchange = extract_vt_symbol(vt_symbol)
         end: datetime = datetime.now(DB_TZ)
         start: datetime = end - timedelta(days)
@@ -362,6 +370,7 @@ class StrategyEngine(BaseEngine):
         strategy: StrategyTemplate = strategy_class(self, strategy_name, vt_symbols, setting)
         self.strategies[strategy_name] = strategy
 
+        vt_symbol: str
         for vt_symbol in vt_symbols:
             strategies: list = self.symbol_strategy_map[vt_symbol]
             strategies.append(strategy)
@@ -389,6 +398,7 @@ class StrategyEngine(BaseEngine):
         # 恢复策略状态
         data: dict | None = self.strategy_data.get(strategy_name, None)
         if data:
+            name: str
             for name in strategy.variables:
                 value: object | None = data.get(name, None)
                 if value is None:
@@ -396,13 +406,15 @@ class StrategyEngine(BaseEngine):
 
                 # 对于持仓和目标数据字典，需要使用dict.update更新defaultdict
                 if name in {"pos_data", "target_data"}:
-                    strategy_data = getattr(strategy, name)
+                    # 持仓和目标都是字典，但值类型不同
+                    strategy_data: Any = getattr(strategy, name)
                     strategy_data.update(value)
                 # 对于其他int/float/str/bool字段则可以直接赋值
                 else:
                     setattr(strategy, name, value)
 
         # 订阅行情
+        vt_symbol: str
         for vt_symbol in strategy.vt_symbols:
             contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
             if contract:
@@ -471,10 +483,12 @@ class StrategyEngine(BaseEngine):
             self.write_log(_("策略{}移除失败，请先停止").format(strategy.strategy_name))
             return False
 
+        vt_symbol: str
         for vt_symbol in strategy.vt_symbols:
             strategies: list = self.symbol_strategy_map[vt_symbol]
             strategies.remove(strategy)
 
+        vt_orderid: str
         for vt_orderid in strategy.active_orderids:
             if vt_orderid in self.orderid_strategy_map:
                 self.orderid_strategy_map.pop(vt_orderid)
@@ -497,8 +511,10 @@ class StrategyEngine(BaseEngine):
 
     def load_strategy_class_from_folder(self, path: Path, module_name: str = "") -> None:
         """通过指定文件夹加载策略类"""
+        suffix: str
         for suffix in ["py", "pyd", "so"]:
             pathname: str = str(path.joinpath(f"*.{suffix}"))
+            filepath: str
             for filepath in glob.glob(pathname):
                 stem: str = Path(filepath).stem
                 strategy_module_name: str = f"{module_name}.{stem}"
@@ -509,8 +525,9 @@ class StrategyEngine(BaseEngine):
         try:
             module: ModuleType = importlib.import_module(module_name)
 
+            name: str
             for name in dir(module):
-                value = getattr(module, name)
+                value: object = getattr(module, name)
                 if (isinstance(value, type) and issubclass(value, StrategyTemplate) and value is not StrategyTemplate):
                     self.classes[value.__name__] = value
         except:  # noqa
@@ -539,6 +556,7 @@ class StrategyEngine(BaseEngine):
         strategy_class: type[StrategyTemplate] = self.classes[class_name]
 
         parameters: dict = {}
+        name: str
         for name in strategy_class.parameters:
             parameters[name] = getattr(strategy_class, name)
 
@@ -551,16 +569,19 @@ class StrategyEngine(BaseEngine):
 
     def init_all_strategies(self) -> None:
         """初始化所有策略"""
+        strategy_name: str
         for strategy_name in self.strategies.keys():
             self.init_strategy(strategy_name)
 
     def start_all_strategies(self) -> None:
         """启动所有策略"""
+        strategy_name: str
         for strategy_name in self.strategies.keys():
             self.start_strategy(strategy_name)
 
     def stop_all_strategies(self) -> None:
         """停止所有策略"""
+        strategy_name: str
         for strategy_name in self.strategies.keys():
             self.stop_strategy(strategy_name)
 
@@ -568,6 +589,8 @@ class StrategyEngine(BaseEngine):
         """加载策略配置"""
         strategy_setting: dict = load_json(self.setting_filename)
 
+        strategy_name: str
+        strategy_config: dict
         for strategy_name, strategy_config in strategy_setting.items():
             self.add_strategy(
                 strategy_config["class_name"],
@@ -580,6 +603,8 @@ class StrategyEngine(BaseEngine):
         """保存策略配置"""
         strategy_setting: dict = {}
 
+        name: str
+        strategy: StrategyTemplate
         for name, strategy in self.strategies.items():
             strategy_setting[name] = {
                 "class_name": strategy.__class__.__name__,

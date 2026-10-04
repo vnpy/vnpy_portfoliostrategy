@@ -15,23 +15,23 @@ from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 class PairTradingStrategy(StrategyTemplate):
     """配对交易策略"""
 
-    author = "用Python的交易员"
+    author: str = "用Python的交易员"
 
-    tick_add = 1
-    boll_window = 20
-    boll_dev = 2
-    fixed_size = 1
-    leg1_ratio = 1
-    leg2_ratio = 1
+    tick_add: int = 1
+    boll_window: int = 20
+    boll_dev: int = 2
+    fixed_size: int = 1
+    leg1_ratio: int = 1
+    leg2_ratio: int = 1
 
-    leg1_symbol = ""
-    leg2_symbol = ""
-    current_spread = 0.0
-    boll_mid = 0.0
-    boll_down = 0.0
-    boll_up = 0.0
+    leg1_symbol: str = ""
+    leg2_symbol: str = ""
+    current_spread: float = 0.0
+    boll_mid: float = 0.0
+    boll_down: float = 0.0
+    boll_up: float = 0.0
 
-    parameters = [
+    parameters: list[str] = [
         "tick_add",
         "boll_window",
         "boll_dev",
@@ -39,7 +39,7 @@ class PairTradingStrategy(StrategyTemplate):
         "leg1_ratio",
         "leg2_ratio",
     ]
-    variables = [
+    variables: list[str] = [
         "leg1_symbol",
         "leg2_symbol",
         "current_spread",
@@ -71,6 +71,7 @@ class PairTradingStrategy(StrategyTemplate):
             """空回调，不处理K线。"""
             pass
 
+        vt_symbol: str
         for vt_symbol in self.vt_symbols:
             self.bgs[vt_symbol] = BarGenerator(on_bar)
 
@@ -94,7 +95,9 @@ class PairTradingStrategy(StrategyTemplate):
             self.last_tick_time
             and self.last_tick_time.minute != tick.datetime.minute
         ):
-            bars = {}
+            bars: dict[str, BarData | None] = {}
+            vt_symbol: str
+            bg: BarGenerator
             for vt_symbol, bg in self.bgs.items():
                 bars[vt_symbol] = bg.generate()
             self.on_bars(cast(dict[str, BarData], bars))
@@ -107,8 +110,8 @@ class PairTradingStrategy(StrategyTemplate):
     def on_bars(self, bars: dict[str, BarData]) -> None:
         """K线切片回调"""
         # 获取期权腿K线
-        leg1_bar = bars.get(self.leg1_symbol, None)
-        leg2_bar = bars.get(self.leg2_symbol, None)
+        leg1_bar: BarData | None = bars.get(self.leg1_symbol, None)
+        leg2_bar: BarData | None = bars.get(self.leg2_symbol, None)
 
         # 必须两条期权腿行情都存在
         if not leg1_bar or not leg2_bar:
@@ -132,13 +135,13 @@ class PairTradingStrategy(StrategyTemplate):
         # 计算布林带
         buf: np.ndarray = self.spread_data[-self.boll_window:]
 
-        std = buf.std()
+        std: float = buf.std()
         self.boll_mid = buf.mean()
         self.boll_up = self.boll_mid + self.boll_dev * std
         self.boll_down = self.boll_mid - self.boll_dev * std
 
         # 计算目标持仓
-        leg1_pos = self.get_pos(self.leg1_symbol)
+        leg1_pos: float = self.get_pos(self.leg1_symbol)
 
         if not leg1_pos:
             if self.current_spread >= self.boll_up:

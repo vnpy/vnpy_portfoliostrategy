@@ -308,8 +308,10 @@ class DataMonitor(QtWidgets.QTableWidget):
         self.verticalHeader().setVisible(False)
         self.setEditTriggers(self.EditTrigger.NoEditTriggers)
 
+        column: int
+        name: str
         for column, name in enumerate(self._data.keys()):
-            value = self._data[name]
+            value: object = self._data[name]
 
             cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(str(value))
             cell.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -319,6 +321,8 @@ class DataMonitor(QtWidgets.QTableWidget):
 
     def update_data(self, data: dict) -> None:
         """更新数据"""
+        name: str
+        value: object
         for name, value in data.items():
             cell: QtWidgets.QTableWidgetItem = self.cells[name]
             cell.setText(str(value))
@@ -381,8 +385,10 @@ class SettingEditor(QtWidgets.QDialog):
             button_text = _("确定")
             parameters = self.parameters
 
+        name: str
+        value: object
         for name, value in parameters.items():
-            type_ = type(value)
+            type_: type = type(value)
 
             edit: QtWidgets.QLineEdit = QtWidgets.QLineEdit(str(value))
             if type_ is int:
@@ -409,9 +415,13 @@ class SettingEditor(QtWidgets.QDialog):
         if self.class_name:
             setting["class_name"] = self.class_name
 
+        name: str
+        tp: tuple[QtWidgets.QLineEdit, type]
         for name, tp in self.edits.items():
+            edit: QtWidgets.QLineEdit
+            type_: type
             edit, type_ = tp
-            value_text = edit.text()
+            value_text: str = edit.text()
 
             if type_ is bool:
                 if value_text == "True":

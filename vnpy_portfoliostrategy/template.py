@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from copy import copy
 from collections import defaultdict
+from collections.abc import Callable
 from typing import Any, cast
 
 from vnpy.trader.constant import Interval, Direction, Offset
@@ -55,6 +56,7 @@ class StrategyTemplate(ABC):
 
     def update_setting(self, setting: dict) -> None:
         """设置策略参数"""
+        name: str
         for name in self.parameters:
             if name in setting:
                 setattr(self, name, setting[name])
@@ -63,6 +65,7 @@ class StrategyTemplate(ABC):
     def get_class_parameters(cls) -> dict:
         """查取策略默认参数"""
         class_parameters: dict = {}
+        name: str
         for name in cls.parameters:
             class_parameters[name] = getattr(cls, name)
         return class_parameters
@@ -70,6 +73,7 @@ class StrategyTemplate(ABC):
     def get_parameters(self) -> dict:
         """查询策略参数"""
         strategy_parameters: dict = {}
+        name: str
         for name in self.parameters:
             strategy_parameters[name] = getattr(self, name)
         return strategy_parameters
@@ -77,6 +81,7 @@ class StrategyTemplate(ABC):
     def get_variables(self) -> dict:
         """查询策略变量"""
         strategy_variables: dict = {}
+        name: str
         for name in self.variables:
             strategy_variables[name] = getattr(self, name)
         return strategy_variables
@@ -161,6 +166,7 @@ class StrategyTemplate(ABC):
                 self, vt_symbol, direction, offset, price, volume, lock, net
             )
 
+            vt_orderid: str
             for vt_orderid in vt_orderids:
                 self.active_orderids.add(vt_orderid)
 
@@ -175,6 +181,7 @@ class StrategyTemplate(ABC):
 
     def cancel_all(self) -> None:
         """全撤活动委托"""
+        vt_orderid: str
         for vt_orderid in list(self.active_orderids):
             self.cancel_order(vt_orderid)
 
@@ -195,6 +202,8 @@ class StrategyTemplate(ABC):
         self.cancel_all()
 
         # 只发出当前K线切片有行情的合约的委托
+        vt_symbol: str
+        bar: BarData
         for vt_symbol, bar in bars.items():
             # 计算仓差
             target: int = self.get_target(vt_symbol)
@@ -299,7 +308,7 @@ class StrategyTemplate(ABC):
         if self.inited:
             self.strategy_engine.send_notification(msg, self)
 
-    send_email = send_notification
+    send_email: Callable[["StrategyTemplate", str], None] = send_notification
 
     def sync_data(self) -> None:
         """同步策略状态数据到文件"""

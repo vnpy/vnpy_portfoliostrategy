@@ -12,17 +12,17 @@ from vnpy_portfoliostrategy.utility import PortfolioBarGenerator
 class PortfolioBollChannelStrategy(StrategyTemplate):
     """组合布林带通道策略"""
 
-    author = "用Python的交易员"
+    author: str = "用Python的交易员"
 
-    boll_window = 18
-    boll_dev = 3.4
-    cci_window = 10
-    atr_window = 30
-    sl_multiplier = 5.2
-    fixed_size = 1
-    price_add = 5
+    boll_window: int = 18
+    boll_dev: float = 3.4
+    cci_window: int = 10
+    atr_window: int = 30
+    sl_multiplier: float = 5.2
+    fixed_size: int = 1
+    price_add: int = 5
 
-    parameters = [
+    parameters: list[str] = [
         "boll_window",
         "boll_dev",
         "cci_window",
@@ -31,7 +31,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         "fixed_size",
         "price_add"
     ]
-    variables = []
+    variables: list[str] = []
 
     def __init__(
         self,
@@ -55,11 +55,12 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
 
         # 获取合约信息
         self.ams: dict[str, ArrayManager] = {}
+        vt_symbol: str
         for vt_symbol in self.vt_symbols:
             self.ams[vt_symbol] = ArrayManager()
             self.targets[vt_symbol] = 0
 
-        self.pbg = PortfolioBarGenerator(self.on_bars, 2, self.on_2hour_bars, Interval.HOUR)
+        self.pbg: PortfolioBarGenerator = PortfolioBarGenerator(self.on_bars, 2, self.on_2hour_bars, Interval.HOUR)
 
     def on_init(self) -> None:
         """策略初始化回调"""
@@ -88,6 +89,8 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
         self.cancel_all()
 
         # 更新到缓存序列
+        vt_symbol: str
+        bar: BarData
         for vt_symbol, bar in bars.items():
             am: ArrayManager = self.ams[vt_symbol]
             am.update_bar(bar)
@@ -102,7 +105,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
             self.atr_value[vt_symbol] = am.atr(self.atr_window)
 
             # 计算目标仓位
-            current_pos = self.get_pos(vt_symbol)
+            current_pos: float = self.get_pos(vt_symbol)
             if current_pos == 0:
                 self.intra_trade_high[vt_symbol] = bar.high_price
                 self.intra_trade_low[vt_symbol] = bar.low_price
@@ -116,7 +119,7 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 self.intra_trade_high[vt_symbol] = max(self.intra_trade_high[vt_symbol], bar.high_price)
                 self.intra_trade_low[vt_symbol] = bar.low_price
 
-                long_stop = self.intra_trade_high[vt_symbol] - self.atr_value[vt_symbol] * self.sl_multiplier
+                long_stop: float = self.intra_trade_high[vt_symbol] - self.atr_value[vt_symbol] * self.sl_multiplier
 
                 if bar.close_price <= long_stop:
                     self.targets[vt_symbol] = 0
@@ -125,24 +128,24 @@ class PortfolioBollChannelStrategy(StrategyTemplate):
                 self.intra_trade_low[vt_symbol] = min(self.intra_trade_low[vt_symbol], bar.low_price)
                 self.intra_trade_high[vt_symbol] = bar.high_price
 
-                short_stop = self.intra_trade_low[vt_symbol] + self.atr_value[vt_symbol] * self.sl_multiplier
+                short_stop: float = self.intra_trade_low[vt_symbol] + self.atr_value[vt_symbol] * self.sl_multiplier
 
                 if bar.close_price >= short_stop:
                     self.targets[vt_symbol] = 0
 
         # 基于目标仓位进行委托
         for vt_symbol in self.vt_symbols:
-            target_pos = self.targets[vt_symbol]
+            target_pos: int = self.targets[vt_symbol]
             current_pos = self.get_pos(vt_symbol)
 
-            pos_diff = target_pos - current_pos
-            volume = abs(pos_diff)
+            pos_diff: float = target_pos - current_pos
+            volume: float = abs(pos_diff)
             bar = bars[vt_symbol]
-            boll_up = self.boll_up[vt_symbol]
-            boll_down = self.boll_down[vt_symbol]
+            boll_up: float = self.boll_up[vt_symbol]
+            boll_down: float = self.boll_down[vt_symbol]
 
             if pos_diff > 0:
-                price = bar.close_price + self.price_add
+                price: float = bar.close_price + self.price_add
 
                 if current_pos < 0:
                     self.cover(vt_symbol, price, volume)

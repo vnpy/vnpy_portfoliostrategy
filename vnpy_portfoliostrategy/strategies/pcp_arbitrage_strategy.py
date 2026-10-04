@@ -13,29 +13,29 @@ from vnpy_portfoliostrategy import StrategyTemplate, StrategyEngine
 class PcpArbitrageStrategy(StrategyTemplate):
     """期权平价套利策略"""
 
-    author = "用Python的交易员"
+    author: str = "用Python的交易员"
 
-    entry_level = 20
-    price_add = 5
-    fixed_size = 1
+    entry_level: int = 20
+    price_add: int = 5
+    fixed_size: int = 1
 
-    strike_price = 0
+    strike_price: int = 0
     futures_price: float = 0
     synthetic_price: float = 0
     current_spread: float = 0
     futures_pos: float = 0
     call_pos: float = 0
     put_pos: float = 0
-    futures_target = 0
-    call_target = 0
-    put_target = 0
+    futures_target: int = 0
+    call_target: int = 0
+    put_target: int = 0
 
-    parameters = [
+    parameters: list[str] = [
         "entry_level",
         "price_add",
         "fixed_size"
     ]
-    variables = [
+    variables: list[str] = [
         "strike_price",
         "futures_price",
         "synthetic_price",
@@ -62,17 +62,20 @@ class PcpArbitrageStrategy(StrategyTemplate):
         self.last_tick_time: datetime | None = None
 
         # 绑定合约代码
+        vt_symbol: str
         for vt_symbol in self.vt_symbols:
+            symbol: str
             symbol, _ = extract_vt_symbol(vt_symbol)
 
             if "C" in symbol:
-                self.call_symbol = vt_symbol
+                self.call_symbol: str = vt_symbol
+                strike_str: str
                 _, strike_str = symbol.split("-C-")     # CFFEX/DCE
                 self.strike_price = int(strike_str)
             elif "P" in symbol:
-                self.put_symbol = vt_symbol
+                self.put_symbol: str = vt_symbol
             else:
-                self.futures_symbol = vt_symbol
+                self.futures_symbol: str = vt_symbol
 
             def on_bar(bar: BarData) -> None:
                 """空回调，不处理K线。"""
@@ -100,7 +103,9 @@ class PcpArbitrageStrategy(StrategyTemplate):
             self.last_tick_time
             and self.last_tick_time.minute != tick.datetime.minute
         ):
-            bars = {}
+            bars: dict[str, BarData | None] = {}
+            vt_symbol: str
+            bg: BarGenerator
             for vt_symbol, bg in self.bgs.items():
                 bars[vt_symbol] = bg.generate()
             self.on_bars(cast(dict[str, BarData], bars))
@@ -115,9 +120,9 @@ class PcpArbitrageStrategy(StrategyTemplate):
         self.cancel_all()
 
         # 计算PCP价差
-        call_bar = bars[self.call_symbol]
-        put_bar = bars[self.put_symbol]
-        futures_bar = bars[self.futures_symbol]
+        call_bar: BarData = bars[self.call_symbol]
+        put_bar: BarData = bars[self.put_symbol]
+        futures_bar: BarData = bars[self.futures_symbol]
 
         self.futures_price = futures_bar.close_price
         self.synthetic_price = call_bar.close_price - put_bar.close_price + self.strike_price
