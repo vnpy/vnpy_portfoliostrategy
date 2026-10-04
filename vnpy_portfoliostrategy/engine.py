@@ -7,6 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from types import ModuleType
 from collections.abc import Callable
+from typing import cast
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
@@ -97,7 +98,7 @@ class StrategyEngine(BaseEngine):
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
 
-        log_engine: LogEngine = self.main_engine.get_engine("log")
+        log_engine: LogEngine = cast(LogEngine, self.main_engine.get_engine("log"))
         log_engine.register_log(EVENT_PORTFOLIO_LOG)
 
     def init_datafeed(self) -> None:
@@ -242,12 +243,12 @@ class StrategyEngine(BaseEngine):
         else:
             return None
 
-    def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> int | None:
+    def get_size(self, strategy: StrategyTemplate, vt_symbol: str) -> float | None:
         """获取合约乘数"""
         contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
 
         if contract:
-            size: int = contract.size
+            size: float = contract.size
             return size
         else:
             return None
@@ -262,9 +263,9 @@ class StrategyEngine(BaseEngine):
         for vt_symbol in vt_symbols:
             data: list[BarData] = self.load_bar(vt_symbol, days, interval)
 
-            for bar in data:
-                dts_set.add(bar.datetime)
-                history_data[(bar.datetime, vt_symbol)] = bar
+            for history_bar in data:
+                dts_set.add(history_bar.datetime)
+                history_data[(history_bar.datetime, vt_symbol)] = history_bar
 
         dts: list[datetime] = list(dts_set)
         dts.sort()
@@ -273,7 +274,7 @@ class StrategyEngine(BaseEngine):
 
         for dt in dts:
             for vt_symbol in vt_symbols:
-                bar = history_data.get((dt, vt_symbol), None)
+                bar: BarData | None = history_data.get((dt, vt_symbol), None)
 
                 # 如果获取到合约指定时间的历史数据，缓存进bars字典
                 if bar:

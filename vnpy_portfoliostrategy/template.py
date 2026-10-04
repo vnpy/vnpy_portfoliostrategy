@@ -35,7 +35,8 @@ class StrategyTemplate(ABC):
         self.trading: bool = False
 
         # 持仓数据字典
-        self.pos_data: dict[str, int] = defaultdict(int)        # 实际持仓
+        # 实际持仓。成交量是 float；缺省值仍来自 defaultdict(int)。
+        self.pos_data: dict[str, float] = cast(dict[str, float], defaultdict(int))
         self.target_data: dict[str, int] = defaultdict(int)     # 目标持仓
 
         # 委托缓存容器
@@ -177,7 +178,7 @@ class StrategyTemplate(ABC):
         for vt_orderid in list(self.active_orderids):
             self.cancel_order(vt_orderid)
 
-    def get_pos(self, vt_symbol: str) -> int:
+    def get_pos(self, vt_symbol: str) -> float:
         """查询当前持仓"""
         return self.pos_data.get(vt_symbol, 0)
 
@@ -197,8 +198,8 @@ class StrategyTemplate(ABC):
         for vt_symbol, bar in bars.items():
             # 计算仓差
             target: int = self.get_target(vt_symbol)
-            pos: int = self.get_pos(vt_symbol)
-            diff: int = target - pos
+            pos: float = self.get_pos(vt_symbol)
+            diff: float = target - pos
 
             # 多头
             if diff > 0:
@@ -210,8 +211,8 @@ class StrategyTemplate(ABC):
                 )
 
                 # 计算买平和买开数量
-                cover_volume: int = 0
-                buy_volume: int = 0
+                cover_volume: float = 0
+                buy_volume: float = 0
 
                 if pos < 0:
                     cover_volume = min(diff, abs(pos))
@@ -235,8 +236,8 @@ class StrategyTemplate(ABC):
                 )
 
                 # 计算卖平和卖开数量
-                sell_volume: int = 0
-                short_volume: int = 0
+                sell_volume: float = 0
+                short_volume: float = 0
 
                 if pos > 0:
                     sell_volume = min(abs(diff), pos)
@@ -264,7 +265,7 @@ class StrategyTemplate(ABC):
         """查询委托数据"""
         return self.orders.get(vt_orderid, None)
 
-    def get_all_active_orderids(self) -> list[OrderData]:
+    def get_all_active_orderids(self) -> list[str]:
         """获取全部活动状态的委托号"""
         return list(self.active_orderids)
 

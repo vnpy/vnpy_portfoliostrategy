@@ -9,8 +9,9 @@ import traceback
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from collections.abc import Callable
+from typing import cast
 
 from vnpy.trader.constant import Direction, Offset, Interval, Status
 from vnpy.trader.database import get_database, BaseDatabase
@@ -76,7 +77,7 @@ class BacktestingEngine:
         self.logs: list = []
 
         self.daily_results: dict[date, PortfolioDailyResult] = {}
-        self.daily_df: DataFrame = None
+        self.daily_df: DataFrame | None = None
 
     def clear_data(self) -> None:
         """清理上次回测缓存数据"""
@@ -242,16 +243,16 @@ class BacktestingEngine:
 
         self.output(_("历史数据回放结束"))
 
-    def calculate_result(self) -> DataFrame:
+    def calculate_result(self) -> DataFrame | None:
         """计算逐日盯市盈亏"""
         self.output(_("开始计算逐日盯市盈亏"))
 
         if not self.trades:
             self.output(_("成交记录为空，无法计算"))
-            return
+            return None
 
         for trade in self.trades.values():
-            d: date = trade.datetime.date()
+            d: date = cast(datetime, trade.datetime).date()
             daily_result: PortfolioDailyResult = self.daily_results[d]
             daily_result.add_trade(trade)
 
@@ -288,7 +289,7 @@ class BacktestingEngine:
         self.output(_("逐日盯市盈亏计算完成"))
         return self.daily_df
 
-    def calculate_statistics(self, df: DataFrame = None, output: bool = True) -> dict:
+    def calculate_statistics(self, df: DataFrame | None = None, output: bool = True) -> dict:
         """计算策略统计指标"""
         self.output(_("开始计算策略统计指标"))
 
@@ -328,18 +329,19 @@ class BacktestingEngine:
         # 计算资金相关指标
         if df is not None:
             df["balance"] = df["net_pnl"].cumsum() + self.capital
-            df["return"] = np.log(df["balance"] / df["balance"].shift(1)).fillna(0)
+            df["return"] = cast(Series, np.log(df["balance"] / df["balance"].shift(1))).fillna(0)
             df["highlevel"] = df["balance"].rolling(min_periods=1, window=len(df), center=False).max()
             df["drawdown"] = df["balance"] - df["highlevel"]
             df["ddpercent"] = df["drawdown"] / df["highlevel"] * 100
 
             # 检查是否发生过爆仓
-            positive_balance = (df["balance"] > 0).all()
+            positive_balance = bool((df["balance"] > 0).all())
             if not positive_balance:
                 self.output(_("回测中出现爆仓（资金小于等于0），无法计算策略统计指标"))
 
         # 计算统计指标
         if positive_balance:
+            df = cast(DataFrame, df)
             start_date = df.index[0]
             end_date = df.index[-1]
 
@@ -353,7 +355,7 @@ class BacktestingEngine:
             max_drawdown_end = df["drawdown"].idxmin()
 
             if isinstance(max_drawdown_end, date):
-                max_drawdown_start = df["balance"][:max_drawdown_end].idxmax()          # type: ignore
+                max_drawdown_start = df["balance"][:max_drawdown_end].idxmax()
                 max_drawdown_duration = (max_drawdown_end - max_drawdown_start).days
             else:
                 max_drawdown_duration = 0
@@ -460,7 +462,7 @@ class BacktestingEngine:
         self.output(_("策略统计指标计算完成"))
         return statistics
 
-    def show_chart(self, df: DataFrame = None) -> None:
+    def show_chart(self, df: DataFrame | None = None) -> None:
         """显示图表"""
         if df is None:
             df = self.daily_df
@@ -993,7 +995,7 @@ def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> Callable:
     return func
 
 
-def get_target_value(result: list) -> float:
+def get_target_value(result: tuple) -> float:
     """获取优化目标"""
     target_value: float = result[1]
     return target_value

@@ -1,6 +1,7 @@
 """期权平价套利策略。"""
 
 from datetime import datetime
+from typing import cast
 
 from vnpy.trader.utility import BarGenerator, extract_vt_symbol
 from vnpy.trader.object import TickData, BarData
@@ -19,12 +20,12 @@ class PcpArbitrageStrategy(StrategyTemplate):
     fixed_size = 1
 
     strike_price = 0
-    futures_price = 0
-    synthetic_price = 0
-    current_spread = 0
-    futures_pos = 0
-    call_pos = 0
-    put_pos = 0
+    futures_price: float = 0
+    synthetic_price: float = 0
+    current_spread: float = 0
+    futures_pos: float = 0
+    call_pos: float = 0
+    put_pos: float = 0
     futures_target = 0
     call_target = 0
     put_target = 0
@@ -102,7 +103,7 @@ class PcpArbitrageStrategy(StrategyTemplate):
             bars = {}
             for vt_symbol, bg in self.bgs.items():
                 bars[vt_symbol] = bg.generate()
-            self.on_bars(bars)
+            self.on_bars(cast(dict[str, BarData], bars))
 
         bg = self.bgs[tick.vt_symbol]
         bg.update_tick(tick)

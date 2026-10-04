@@ -1,5 +1,7 @@
 """组合策略界面。"""
 
+from typing import cast
+
 from vnpy.event import Event, EventEngine
 from vnpy.trader.engine import MainEngine
 from vnpy.trader.ui import QtCore, QtGui, QtWidgets
@@ -29,7 +31,7 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
 
         self.main_engine: MainEngine = main_engine
         self.event_engine: EventEngine = event_engine
-        self.strategy_engine: StrategyEngine = main_engine.get_engine(APP_NAME)
+        self.strategy_engine: StrategyEngine = cast(StrategyEngine, main_engine.get_engine(APP_NAME))
 
         self.managers: dict[str, StrategyManager] = {}
 
@@ -384,7 +386,7 @@ class SettingEditor(QtWidgets.QDialog):
 
             edit: QtWidgets.QLineEdit = QtWidgets.QLineEdit(str(value))
             if type_ is int:
-                validator: QtGui.QIntValidator = QtGui.QIntValidator()
+                validator: QtGui.QIntValidator | QtGui.QDoubleValidator = QtGui.QIntValidator()
                 edit.setValidator(validator)
             elif type_ is float:
                 validator = QtGui.QDoubleValidator()

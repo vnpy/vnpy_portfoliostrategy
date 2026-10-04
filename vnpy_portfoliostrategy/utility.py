@@ -26,10 +26,10 @@ class PortfolioBarGenerator:
         self.bars: dict[str, BarData] = {}
         self.last_ticks: dict[str, TickData] = {}
 
-        self.hour_bars: dict[str, BarData] = {}
+        self.hour_bars: dict[str, BarData | None] = {}
         self.finished_hour_bars: dict[str, BarData] = {}
 
-        self.daily_bars: dict[str, BarData] = {}
+        self.daily_bars: dict[str, BarData | None] = {}
         self.finished_daily_bars: dict[str, BarData] = {}
 
         self.window: int = window
@@ -48,13 +48,13 @@ class PortfolioBarGenerator:
             return
 
         if self.last_dt and self.last_dt.minute != tick.datetime.minute:
-            for bar in self.bars.values():
-                bar.datetime = bar.datetime.replace(second=0, microsecond=0)
+            for cached_bar in self.bars.values():
+                cached_bar.datetime = cached_bar.datetime.replace(second=0, microsecond=0)
 
             self.on_bars(self.bars)
             self.bars = {}
 
-        bar = self.bars.get(tick.vt_symbol, None)
+        bar: BarData | None = self.bars.get(tick.vt_symbol, None)
         if not bar:
             bar = BarData(
                 symbol=tick.symbol,

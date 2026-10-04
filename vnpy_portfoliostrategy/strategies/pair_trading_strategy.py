@@ -1,6 +1,7 @@
 """配对交易策略。"""
 
 from datetime import datetime
+from typing import cast
 
 import numpy as np
 
@@ -96,7 +97,7 @@ class PairTradingStrategy(StrategyTemplate):
             bars = {}
             for vt_symbol, bg in self.bgs.items():
                 bars[vt_symbol] = bg.generate()
-            self.on_bars(bars)
+            self.on_bars(cast(dict[str, BarData], bars))
 
         bg = self.bgs[tick.vt_symbol]
         bg.update_tick(tick)
