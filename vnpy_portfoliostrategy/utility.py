@@ -47,7 +47,10 @@ class PortfolioBarGenerator:
         if not tick.last_price:
             return
 
-        if self.last_dt and self.last_dt.minute != tick.datetime.minute:
+        if self.last_dt and (
+            self.last_dt.replace(second=0, microsecond=0)      # 上一Tick的完整分钟，含日期和小时
+            != tick.datetime.replace(second=0, microsecond=0)  # 当前Tick的完整分钟，不同才推出K线
+        ):
             cached_bar: BarData
             for cached_bar in self.bars.values():
                 cached_bar.datetime = cached_bar.datetime.replace(second=0, microsecond=0)
