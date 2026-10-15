@@ -111,6 +111,12 @@ class PortfolioStrategyManager(QtWidgets.QWidget):
         """策略事件推送"""
         data: dict = event.data
         strategy_name: str = data["strategy_name"]
+        # 事件到达时策略可能已恢复或更换，界面按当前实例刷新。
+        strategy = self.strategy_engine.strategies.get(strategy_name)
+        if strategy is None:
+            return
+        data = strategy.get_data()
+        data["active_orderids"] = list(strategy.active_orderids)
 
         if strategy_name in self.managers:
             manager: StrategyManager = self.managers[strategy_name]
@@ -172,6 +178,7 @@ class StrategyManager(QtWidgets.QFrame):
         self._data: dict = data
 
         self.init_ui()
+        self.update_data(data)
 
     def init_ui(self) -> None:
         """初始化界面"""
@@ -235,9 +242,8 @@ class StrategyManager(QtWidgets.QFrame):
         inited: bool = variables["inited"]
         trading: bool = variables["trading"]
 
-        if not inited:
-            return
-        self.init_button.setEnabled(False)
+        pending: bool = bool(data.get("active_orderids"))
+        self.init_button.setEnabled(not inited)
 
         if trading:
             self.start_button.setEnabled(False)
@@ -245,10 +251,10 @@ class StrategyManager(QtWidgets.QFrame):
             self.edit_button.setEnabled(False)
             self.remove_button.setEnabled(False)
         else:
-            self.start_button.setEnabled(True)
-            self.stop_button.setEnabled(False)
+            self.start_button.setEnabled(inited)
+            self.stop_button.setEnabled(pending)
             self.edit_button.setEnabled(True)
-            self.remove_button.setEnabled(True)
+            self.remove_button.setEnabled(not pending)
 
     def init_strategy(self) -> None:
         """初始化策略"""

@@ -74,6 +74,8 @@ class StrategyEngine(BaseEngine):
         self.init_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
 
         self.vt_tradeids: set[str] = set()
+        self._failed_strategy_ids: set[int] = set()
+        self._restored_strategy_ids: set[int] = set()
 
         # 数据库和数据服务
         self.database: BaseDatabase = get_database()
@@ -142,7 +144,10 @@ class StrategyEngine(BaseEngine):
         if not strategy:
             return
 
+        had_active_orders: bool = bool(strategy.active_orderids)
         self.call_strategy_func(strategy, strategy.update_order, order)
+        if not strategy.trading and had_active_orders != bool(strategy.active_orderids):
+            self.put_strategy_event(strategy)
 
     def process_trade_event(self, event: Event) -> None:
         """成交数据推送"""
@@ -348,6 +353,8 @@ class StrategyEngine(BaseEngine):
             else:
                 func()
         except Exception:
+            if self.strategies.get(strategy.strategy_name) is strategy:
+                self._failed_strategy_ids.add(id(strategy))
             strategy.trading = False
             strategy.inited = False
 
@@ -393,13 +400,22 @@ class StrategyEngine(BaseEngine):
         self.write_log(_("{}开始执行初始化").format(strategy_name))
 
         # 调用策略on_init函数
+        self._failed_strategy_ids.discard(id(strategy))
+        self._restored_strategy_ids.discard(id(strategy))
         self.call_strategy_func(strategy, strategy.on_init)
+        if self.strategies.get(strategy_name) is not strategy:
+            return
+        if id(strategy) in self._failed_strategy_ids:
+            self.put_strategy_event(strategy)
+            return
 
         # 恢复策略状态
         data: dict | None = self.strategy_data.get(strategy_name, None)
         if data:
             name: str
             for name in strategy.variables:
+                if name in {"inited", "trading"}:
+                    continue
                 value: object | None = data.get(name, None)
                 if value is None:
                     continue
@@ -412,6 +428,7 @@ class StrategyEngine(BaseEngine):
                 # 对于其他int/float/str/bool字段则可以直接赋值
                 else:
                     setattr(strategy, name, value)
+        self._restored_strategy_ids.add(id(strategy))
 
         # 订阅行情
         vt_symbol: str
@@ -425,6 +442,9 @@ class StrategyEngine(BaseEngine):
                 self.write_log(_("行情订阅失败，找不到合约{}").format(vt_symbol), strategy)
 
         # 推送策略事件通知初始化完成状态
+        if id(strategy) in self._failed_strategy_ids:
+            self.put_strategy_event(strategy)
+            return
         strategy.inited = True
         self.put_strategy_event(strategy)
         self.write_log(_("{}初始化完成").format(strategy_name))
@@ -441,16 +461,26 @@ class StrategyEngine(BaseEngine):
             return
 
         # 调用策略on_start函数
+        self._restored_strategy_ids.add(id(strategy))
         self.call_strategy_func(strategy, strategy.on_start)
+        if self.strategies.get(strategy_name) is not strategy:
+            return
 
         # 推送策略事件通知启动完成状态
-        strategy.trading = True
+        strategy.trading = strategy.inited and id(strategy) not in self._failed_strategy_ids
+        if not strategy.trading:
+            self._failed_strategy_ids.add(id(strategy))
         self.put_strategy_event(strategy)
 
     def stop_strategy(self, strategy_name: str) -> None:
         """停止策略"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
         if not strategy.trading:
+            if id(strategy) in self._failed_strategy_ids or strategy.active_orderids:
+                self.cancel_all(strategy)
+                if id(strategy) in self._restored_strategy_ids:
+                    self.sync_strategy_data(strategy)
+                self.put_strategy_event(strategy)
             return
 
         # 调用策略on_stop函数
@@ -479,7 +509,7 @@ class StrategyEngine(BaseEngine):
     def remove_strategy(self, strategy_name: str) -> bool:
         """移除策略实例"""
         strategy: StrategyTemplate = self.strategies[strategy_name]
-        if strategy.trading:
+        if strategy.trading or strategy.active_orderids:
             self.write_log(_("策略{}移除失败，请先停止").format(strategy.strategy_name))
             return False
 
@@ -494,6 +524,8 @@ class StrategyEngine(BaseEngine):
                 self.orderid_strategy_map.pop(vt_orderid)
 
         self.strategies.pop(strategy_name)
+        self._failed_strategy_ids.discard(id(strategy))
+        self._restored_strategy_ids.discard(id(strategy))
         self.save_strategy_setting()
 
         self.strategy_data.pop(strategy_name, None)
@@ -617,6 +649,7 @@ class StrategyEngine(BaseEngine):
     def put_strategy_event(self, strategy: StrategyTemplate) -> None:
         """推送事件更新策略界面"""
         data: dict = strategy.get_data()
+        data["active_orderids"] = list(strategy.active_orderids)
         event: Event = Event(EVENT_PORTFOLIO_STRATEGY, data)
         self.event_engine.put(event)
 
